@@ -1,0 +1,37 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<odoo>
+    <record id="payment_provider_form" model="ir.ui.view">
+        <field name="name">PayWay Provider Form</field>
+        <field name="model">payment.provider</field>
+        <field name="inherit_id" ref="payment.payment_provider_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group[@name='provider_credentials']"                 
+                position='inside'
+                invisible="code != 'payway'"
+            >
+                <group string="PayWay Credentials (Production)" name="payway_production_credentials">
+                    <field name="production_payway_merchant_id"
+                            string="Production Merchant ID"
+                            required="True"
+                    />
+                    <field name="production_payway_public_key"
+                            string="Production Secure Public Key"
+                            required="True"
+                            password="True"
+                    />
+                </group>
+
+                <group string="PayWay Credentials (Sandbox)" name="payway_sandbox_credentials">
+                    <field name="sandbox_payway_merchant_id"
+                            string="Sandbox Merchant ID"
+                    />
+                    <field name="sandbox_payway_public_key"
+                            string="Sandbox Secure Public Key"
+                            password="True"
+                    />
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

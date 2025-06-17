@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="payment_provider_payway_qr_ref" model="payment.provider"/>
+
+        <record id="payment_method_payway_qr_pos" model="payment.method">
+            <field name="name">ABA Payway</field>
+            <field name="code">abapay</field>
+            <field name="payment_provider_id" ref="payment_provider_payway_qr_ref"/>
+            <!-- <field name="journal_id" ref="journal_my_qr_pay_pos"/> -->
+            <field name="is_payment_method_a_card">False</field>
+            <field name="payment_flow">direct</field>
+        </record>
+    </data>
+</odoo>
