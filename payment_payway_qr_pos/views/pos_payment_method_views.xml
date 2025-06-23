@@ -1,0 +1,12 @@
+<!-- <odoo>
+    <record id="view_pos_payment_method_views_inherit_qr" model="ir.ui.view">
+        <field name="name">pos.payment.method.form.qr.inherit</field>
+        <field name="model">pos.payment.method</field>
+        <field name="inherit_id" ref="point_of_sale.pos_payment_method_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group" position="inside">
+                <field name="qr_code_method"/>
+            </xpath>
+        </field>
+    </record>
+</odoo> -->

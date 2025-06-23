@@ -17,5 +17,4 @@
         'views/payment_provider_views.xml',
         'data/payment_provider_data.xml',
     ],
-    'auto_install': ['payment'],
 }

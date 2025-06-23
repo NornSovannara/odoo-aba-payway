@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_partner_bank_form_inherit_account" model="ir.ui.view">
+        <field name="name">res.partner.bank.form.inherit.account</field>
+        <field name="model">res.partner.bank</field>
+        <field name="inherit_id" ref="base.view_partner_bank_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='currency_id']" position="after">
+                <!-- <group invisible="code != 'payway'"> -->
+                <group>
+                    <field name="production_payway_merchant_id" string="Production Merchant ID"/>
+                    <field name="production_payway_public_key" string="Production Secure Public Key"/>
+                    
+                    <field name="sandbox_payway_merchant_id" string="Sandbox Merchant ID"/>
+                    <field name="sandbox_payway_public_key" string="Sandbox Secure Public Key"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>
