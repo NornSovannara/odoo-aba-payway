@@ -4,8 +4,11 @@ import { user } from "@web/core/user";
 
 patch(PosStore.prototype, {
     async showQR(payment) {
-        // Add context to signal backend it's coming from PoS
-        user.updateContext({ qris_model: "pos.order", qris_model_id: payment.pos_order_id.uuid });
+        // Add your custom logic here
+        // For example, add context or call backend
+        // Example: this.env.services.user.updateContext(...)
+        
+        user.updateContext({ model: "pos.order", model_id: payment.pos_order_id.uuid });
         return await super.showQR(payment);
     },
 });

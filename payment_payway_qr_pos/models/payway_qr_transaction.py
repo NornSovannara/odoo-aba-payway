@@ -1,8 +1,8 @@
 from odoo import models
 
 
-class QRISTransaction(models.Model):
-    _inherit = "l10n_id.qris.transaction"
+class PaywayQRTransaction(models.Model):
+    _inherit = "account_payway_qr_base.payway_qr.transaction"
 
     def _get_supported_models(self):
         return super()._get_supported_models() + ['pos.order']

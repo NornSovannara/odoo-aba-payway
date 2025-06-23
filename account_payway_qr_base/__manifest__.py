@@ -1,20 +1,20 @@
 {
-    'name': 'Payway Payment QR Base',
+    'name': 'Account Payway Payment QR Base',
     'countries': ['KH'],
     'version': '1.0',
+    'category': 'Accounting/Payment',
     'summary': 'Base module for integrating Payway QR payments.',
     'description': """
         This module provides the core functionalities for interacting with Payway
         QR payment API, including configuration and QR generation logic.
     """,
     'author': 'ABA Bank',
-    'category': 'Accounting/Payment',
     'depends': [
-        'payment',
         'account',
     ],
+    'auto_install': ['account'],
     'data': [
-        'views/payment_provider_views.xml',
-        'data/payment_provider_data.xml',
+        'views/res_bank.xml',
     ],
+    'license': 'LGPL-3',
 }
