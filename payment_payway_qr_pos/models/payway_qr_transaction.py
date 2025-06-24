@@ -1,4 +1,8 @@
 from odoo import models
+import logging
+
+
+_logger = logging.getLogger(__name__)
 
 
 class PaywayQRTransaction(models.Model):
@@ -11,5 +15,6 @@ class PaywayQRTransaction(models.Model):
         # Override
         # add it for pos.order
         if self.model == 'pos.order':
+            logging.warm(f"{self.model}, {self.model_id}")
             return self.env[self.model].search([('uuid', '=', self.model_id)])
         return super()._get_record()

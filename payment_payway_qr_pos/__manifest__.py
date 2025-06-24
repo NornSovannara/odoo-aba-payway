@@ -7,16 +7,16 @@
     'category': 'Point of Sale',
     'depends': [
         'point_of_sale',
-        # 'payment_payway_qr_base',
         'account_payway_qr_base',
     ],
     'data': [
-        # 'views/pos_payment_method_views.xml',
+        # 'views/pos_order_receipt_view.xml',
     ],
     'assets': {
-        'point_of_sale.assets': [
-            'payment_payway_qr_pos/static/src/js/pos_store.js',
-            'payment_payway_qr_pos/static/src/js/qr_code_popup.js',
+        'point_of_sale._assets_pos': [
+            'payment_payway_qr_pos/static/src/**/*',
+            # 'payment_payway_qr_pos/static/src/js/pos_order_receipt.js',
+            # 'payment_payway_qr_pos/static/src/xml/pos_order_receipt.xml',
         ],
     },
     'installable': True,
