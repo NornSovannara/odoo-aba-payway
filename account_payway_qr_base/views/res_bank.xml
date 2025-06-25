@@ -9,10 +9,12 @@
                 <!-- <group invisible="code != 'payway'"> -->
                 <group>
                     <field name="production_payway_merchant_id" string="Production Merchant ID"/>
-                    <field name="production_payway_public_key" string="Production Secure Public Key"/>
+                    <field name="production_payway_public_key" string="Production Secure Public Key" password="True"/>
                     
                     <field name="sandbox_payway_merchant_id" string="Sandbox Merchant ID"/>
-                    <field name="sandbox_payway_public_key" string="Sandbox Secure Public Key"/>
+                    <field name="sandbox_payway_public_key" string="Sandbox Secure Public Key" password="True"/>
+                
+                    <field name="payway_environment"/>
                 </group>
             </xpath>
         </field>

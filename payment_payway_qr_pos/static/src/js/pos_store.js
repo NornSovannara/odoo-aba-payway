@@ -11,8 +11,13 @@ patch(PosStore.prototype, {
 
         user.updateContext({ 
             model: "pos.order", 
-            model_id: payment.pos_order_id.uuid 
+            model_id: payment.pos_order_id.uuid,
+            model_reference: payment.pos_order_id.pos_reference
         });
+
+        console.log(payment.pos_order_id.payment_ids)
+        console.log(payment.pos_order_id)
+
         return await super.showQR(payment);
     },
     
