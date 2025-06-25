@@ -6,7 +6,3 @@ class PosOrder(models.Model):
 
     # referenced in l10n_id/models/res_bank.py where we will link QRIS transactions
     # to the record that initiates the payment flow
-    payway_qr_transaction_ids = fields.Many2many(
-        'account_payway_qr_base.payway_qr.transaction'
-    )
-

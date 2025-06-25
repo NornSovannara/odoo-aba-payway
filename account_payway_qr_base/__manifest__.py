@@ -15,7 +15,6 @@
     'auto_install': ['account'],
     'data': [
         'views/res_bank.xml',
-        'security/ir.model.access.csv',
     ],
     'license': 'LGPL-3',
 }

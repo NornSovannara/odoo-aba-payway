@@ -41,3 +41,11 @@ PAYMENT_METHODS_MAPPING = {
     'wechat_pay': 'wechat_pay',
     'alipay': 'alipay',
 }
+
+STATUS_CODE_MAPPING = {
+    0: 'APPROVED',
+    2: 'PENDING',
+    3: 'DECLINDED',
+    4: 'REFUNDED',
+    7: 'CANCELLED',
+}
