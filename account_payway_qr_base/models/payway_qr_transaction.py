@@ -16,6 +16,7 @@ class PaywayQRTransaction(models.Model):
     # ex: pos.order: Point of sale order
     model = fields.Char(string="Model")
     model_id = fields.Char(string="Model ID")
+    model_reference = fields.Char(string="Model Reference")
 
     qr_tran_id = fields.Char(readonly=True)
     qr_amount = fields.Char(readonly=True)
@@ -23,6 +24,19 @@ class PaywayQRTransaction(models.Model):
     qr_req_time = fields.Char(readonly=True)
     qr_currency = fields.Char(readonly=True)
     qr_payment_option = fields.Char(readonly=True)
+    qr_method = fields.Char(readonly=True)
+
+    bank_id = fields.Many2one(
+        "res.partner.bank", help="Bank used to generate the current Payway transaction"
+    )
 
     def _get_supported_models(self):
         return []
+
+    def _get_latest_transaction(self, model, model_id):
+        """Find latest transaction associated to the model and model_id"""
+        return self.search(
+            [('model', '=', model), ('model_id', '=', model_id)],
+            order='qr_creation_datetime desc',
+            limit=1,
+        )
