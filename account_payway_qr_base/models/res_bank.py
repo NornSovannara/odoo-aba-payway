@@ -6,6 +6,7 @@ import logging
 from datetime import datetime
 from urllib.parse import urljoin
 import requests
+import base64
 
 
 from odoo import _, api, fields, models
@@ -134,14 +135,19 @@ class ResBank(models.Model):
 
             _logger.warning(
                 (
-                    f"My custom print {model}, {model_id}, {self.production_payway_merchant_id}, {self.production_payway_public_key}, {self.sandbox_payway_public_key}, {self.sandbox_payway_merchant_id} "
+                    f"yM custom print {model}, {model_id}, {self.production_payway_merchant_id}, {self.production_payway_public_key}, {self.sandbox_payway_public_key}, {self.sandbox_payway_merchant_id} "
                     f"{qr_tran_id}"
                 )
             )
 
             api_url, merchant_id, api_key = self._payway_get_api_cred()
-            self._close_payway_transaction(qr_tran_id)
+            self._payway_api_close_payway_transaction(qr_tran_id)
 
+            base_odoo_url = (
+                self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+            )
+            webhook_url = urljoin(base_odoo_url, '/pos/payway/webhook')
+            print(webhook_url)
             payload = {
                 'req_time': datetime.now().strftime("%Y%m%d%H%M%S"),
                 'merchant_id': merchant_id,
@@ -155,15 +161,20 @@ class ResBank(models.Model):
                 'currency': currency.name.upper(),
                 'lifetime': 3,
                 'qr_image_template': 'template3_color',
+                'callback_url': base64.b64encode(webhook_url.encode('utf-8')).decode(
+                    'utf-8'
+                ),
             }
             payload.update(
                 {'hash': self._payway_calculate_payment_secure_hash(api_key, payload)}
             )
 
+            print(payload)
+
             response = _make_payway_api_request(
                 api_url, '/api/payment-gateway/v1/payments/generate-qr', payload
             )
-            print(response)
+
             if str(response['status']['code']) != '0':
                 # Payway return error
                 raise ValidationError(response['status']['message'])
@@ -205,12 +216,13 @@ class ResBank(models.Model):
 
     # === BUSINESS METHODS ===#
 
-    def _close_payway_transaction(self, qr_tran_id: str):
+    def _payway_api_close_payway_transaction(self, qr_tran_id: str):
         """Cloase payway transaction.
 
         :return: transaction id.
         :rtype: reponse dict
         """
+
         api_url, merchant_id, api_key = self._payway_get_api_cred()
         payload = {
             'req_time': datetime.now().strftime("%Y%m%d%H%M%S"),
