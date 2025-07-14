@@ -10,13 +10,14 @@
         'account_payway_qr_base',
     ],
     'data': [
-        # 'views/pos_order_receipt_view.xml',
+        'views/pos_payment_method_views.xml',
     ],
     'assets': {
         'point_of_sale._assets_pos': [
-            'payment_payway_qr_pos/static/src/**/*',
-            # 'payment_payway_qr_pos/static/src/js/pos_order_receipt.js',
-            # 'payment_payway_qr_pos/static/src/xml/pos_order_receipt.xml',
+            'payment_payway_qr_pos/static/src/app/**/*',
+        ],
+        'point_of_sale.customer_display_assets': [
+            'payment_payway_qr_pos/static/src/customer_display/**/*',
         ],
     },
     'installable': True,

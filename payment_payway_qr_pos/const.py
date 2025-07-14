@@ -1,11 +1,11 @@
 PAYMENT_METHODS_CODES = [
     'abapay_khqr',
-    'wechat_pay',
+    'wechat',
     'alipay',
 ]
 
 PAYMENT_METHODS_MAPPING = {
     'abapay_khqr': 'abapay_khqr',
-    'wechat_pay': 'wechat_pay',
+    'wechat': 'wechat',
     'alipay': 'alipay',
 }

@@ -5,9 +5,9 @@
         <field name="model">res.partner.bank</field>
         <field name="inherit_id" ref="base.view_partner_bank_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//field[@name='currency_id']" position="after">
-                <!-- <group invisible="code != 'payway'"> -->
-                <group>
+
+            <xpath expr="//sheet" position="inside">               
+                <group string="Payway Configuration">
                     <field name="production_payway_merchant_id" string="Production Merchant ID"/>
                     <field name="production_payway_public_key" string="Production Secure Public Key" password="True"/>
                     
@@ -15,9 +15,10 @@
                     <field name="sandbox_payway_public_key" string="Sandbox Secure Public Key" password="True"/>
                 
                     <field name="payway_environment"/>
+                    
+                    <field name="qr_lifetime"/>
                 </group>
             </xpath>
         </field>
     </record>
-
 </odoo>
