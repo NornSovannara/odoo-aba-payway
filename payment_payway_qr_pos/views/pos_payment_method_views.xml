@@ -1,12 +1,16 @@
-<!-- <odoo>
-    <record id="view_pos_payment_method_views_inherit_qr" model="ir.ui.view">
-        <field name="name">pos.payment.method.form.qr.inherit</field>
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="pos_payment_method_view_form_inherit_payway" model="ir.ui.view">
+        <field name="name">pos.payment.method.form.inherit.payway</field>
         <field name="model">pos.payment.method</field>
         <field name="inherit_id" ref="point_of_sale.pos_payment_method_view_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//group" position="inside">
-                <field name="qr_code_method"/>
+            <xpath expr="//field[@name='qr_code_method']" position="after">
+                <field 
+                    name="allow_qr_on_bill"
+                    invisible="payment_method_type != 'qr_code' or qr_code_method not in ('abapay_khqr', 'wechat', 'alipay')"
+                />
             </xpath>
         </field>
     </record>
-</odoo> -->
+</odoo>

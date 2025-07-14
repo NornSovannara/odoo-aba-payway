@@ -5,7 +5,6 @@ API_URLS = {
 
 PAYWAY_ENVIRONMENT = {'production': 'production', 'sandbox': 'sandbox'}
 
-
 PAYMENT_SECURE_HASH_KEYS = [
     'req_time',
     'merchant_id',
@@ -32,20 +31,17 @@ CHECK_TXN_SECURE_HASH_KEYS = ['req_time', 'merchant_id', 'tran_id']
 
 PAYMENT_METHODS_CODES = [
     'abapay_khqr',
-    'wechat_pay',
+    'wechat',
     'alipay',
 ]
 
 PAYMENT_METHODS_MAPPING = {
     'abapay_khqr': 'abapay_khqr',
-    'wechat_pay': 'wechat_pay',
+    'wechat': 'wechat',
     'alipay': 'alipay',
 }
 
-STATUS_CODE_MAPPING = {
-    0: 'APPROVED',
-    2: 'PENDING',
-    3: 'DECLINDED',
-    4: 'REFUNDED',
-    7: 'CANCELLED',
+POS_ORDER_QR_TYPE = {
+    'screen': 'screen',
+    'bill': 'bill',
 }

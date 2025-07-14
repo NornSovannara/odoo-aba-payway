@@ -6,37 +6,22 @@ from odoo.http import request
 class PayWayController(http.Controller):
     _webhook_url = '/pos/payway/webhook'
 
-    @http.route(_webhook_url, type='http', auth='public', methods=['POST'], csrf=False)
-    def payway_webhook(self, **data):
+    @http.route(_webhook_url, type='json', auth='public', methods=['POST'], csrf=False)
+    def payway_webhook(self):
 
         # Search data
-        # pos_order = (
-        #     request.env['pos.order']
-        #     .sudo()
-        #     .search(
-        #         [
-        #             ('pos_reference', '=', 'Order 00167-009-0005'),
-        #         ],
-        #         limit=1,
-        #     )
-        # )
-        print("Send notification from backend")
-        # Call the method to send notification
+        # pos_order = (request.env['pos.order'].sudo().search([('pos_reference', '=', 'Order 00167-009-0005'),],limit=1))
         # pos_order.confirm_qr_payment()
 
+        print("Send notification from backend")
+        data = request.get_json_data()
+        channel_name = 'pos.order.payment.payway.' + data['tran_id']
+
         # Send notification from backend
-        # channel_name = f'pos.order.payment.status.{"Order 00167-009-0005"}'
-        channel_name = 'your_channel'
-        bus_channel_tuple = (request.env.cr.dbname, channel_name)
-        request.env['bus.bus']._sendone(
-            bus_channel_tuple,
+        request.env['bus.bus'].sudo()._sendone(
+            channel_name,
             'notification',
-            {
-                'pos_reference': "Order 00167-009-0005",
-                'status': 'success',
-                'message': 'QR Payment Successful!',
-            },
+            data,
         )
 
-        request.env.cr.commit()
         return "OK"
