@@ -3,13 +3,13 @@
     <t t-inherit="point_of_sale.QRConfirmationDialog" t-inherit-mode="extension">
 
         <!-- <xpath expr="//img[contains(@t-att-src, 'props.qrCode')]" position="replace">
-            <t t-if="state.qr_code_method === 'abapay_khqr' || state.qr_code_method === 'wechat' || state.qr_code_method === 'alipay'">
+            <t t-if="state.qrCodeMethod === 'abapay_khqr' || state.qrCodeMethod === 'wechat' || state.qrCodeMethod === 'alipay'">
                 <img t-att-src="props.qrCode" alt="QR Code"/>
             </t>
         </xpath> -->
 
         <xpath expr="//div[@class='mt-1']" position="after">
-            <t t-if="state.qr_code_method === 'abapay_khqr' || state.qr_code_method === 'wechat' || state.qr_code_method === 'alipay'">
+            <t t-if="state.qrCodeMethod === 'abapay_khqr' || state.qrCodeMethod === 'wechat' || state.qrCodeMethod === 'alipay'">
                 <div class="mt-2 text-center">
                     <p>
                         <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />

@@ -18,7 +18,8 @@
         ],
         'point_of_sale.customer_display_assets': [
             'payment_payway_qr_pos/static/src/customer_display/**/*',
-        ],
+            'payment_payway_qr_pos/static/src/img/**/*'
+        ]
     },
     'installable': True,
 }

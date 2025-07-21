@@ -21,7 +21,7 @@ patch(OrderReceipt.prototype, {
         this.props.order = this.env.services.pos.get_order();
 
         this.state = useState({
-            qr_code_method: "",
+            qrCodeMethod: pm_line.payment_method_id.qr_code_method,
             qr_image: "",
         });
 
@@ -37,22 +37,17 @@ patch(OrderReceipt.prototype, {
     async _fetchQRPaymentMethod() {
         // Fetch QR code and Payment Method from the server
         const pm_line = this.props.order.payment_ids.at(-1);
-        let qr_code_method = '';
         console.log("order receipt: ", pm_line)
 
         try {
-
-            qr_code_method = await this.orm.call("pos.payment.method", "get_payway_qr_code_method", [
-                [pm_line.payment_method_id.id]
-            ]);
-            this.state.qr_code_method = qr_code_method;
+            // qr_code_method = await this.orm.call("pos.payment.method", "get_payway_qr_code_method", [[pm_line.payment_method_id.id]]);            
 
             if (this.props.order.state !== "draft") {
                 // Not new order
                 return;
             };
 
-            if (!PAYWAYQRCODEMETHOD.includes(this.state.qr_code_method)) {
+            if (!PAYWAYQRCODEMETHOD.includes(this.state.qrCodeMethod)) {
                 // Not payway qr method
                 return;
             }

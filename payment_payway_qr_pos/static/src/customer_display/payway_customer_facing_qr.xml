@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Create my own template -->
+<templates id="template" xml:space="preserve">
+    
+    <t t-name="payment_payway_qr_pos.PaywayCustomerFacingQR">
+        <t t-if="props.qrCodeMethod == 'abapay_khqr'">
+            <Dialog footer="false" header="false">
+                <div 
+                    class="text-center d-flex flex-column gap-3 justify-content-center align-items-center"
+                    style="background-color: #E8E9EC; gap: 2rem; padding: 1rem; border-radius: 16px;"
+                >
+                    <img 
+                        t-att-src="'/payment_payway_qr_pos/static/src/img/aba_pay_text.svg'"
+                        alt="ABA Pay Logo"
+                        width="200"
+                    />
+                    <img class="pos-customer_payment_qr_code my-1" t-att-src="props.qrCode" alt="QR Code"/>
+                    <p class="fw-normal text-muted">Scan with ABA Mobile or any other mobile banking app that supports KHQR.</p>
+                </div>
+            </Dialog>
+        </t>
+
+        <t t-elif="props.qrCodeMethod == 'wechat' or props.qrCodeMethod == 'alipay'">
+
+            <Dialog footer="false" header="false">
+                <div 
+                    class="text-center d-flex flex-column gap-1 justify-content-center align-items-center"
+                    style="background-color: #E8E9EC; padding: 1rem; border-radius: 16px;"
+                >
+                    <p style="font-size: 1.3rem; font-weight: bold; color: black; margin-top: 0.5rem;">
+                        32.65 <span style="font-size: 1rem; font-weight: normal; color: #555;">USD</span>
+                    </p>
+
+                    <div class="position-relative d-flex justify-content-center align-items-center my-3" style="width: 250px; height: 250px;">               
+                        <div class="position-absolute translate-middle-y text-dark fw-medium" style="top: 0.1rem; font-size: 16px; z-index: 2;">
+                            Scan to pay
+                        </div>
+
+                        <!-- Top Left -->
+                        <img
+                            t-att-src="'/payment_payway_qr_pos/static/src/img/border-top-left.svg'"
+                            alt="border-top-left"
+                            class="position-absolute"
+                            style="top: 0; left: 0; width: 30px; height: 30px;"
+                        />
+
+                        <!-- Top Right -->
+                        <img
+                            t-att-src="'/payment_payway_qr_pos/static/src/img/border-top-right.svg'"
+                            alt="border-top-right"
+                            class="position-absolute"
+                            style="top: 0; right: 0; width: 30px; height: 30px;"
+                        />
+
+                        <!-- Bottom Left -->
+                        <img
+                            t-att-src="'/payment_payway_qr_pos/static/src/img/border-bottom-left.svg'"
+                            alt="border-bottom-left"
+                            class="position-absolute"
+                            style="bottom: 0; left: 0; width: 30px; height: 30px;"
+                        />
+
+                        <!-- Bottom Right -->
+                        <img
+                            t-att-src="'/payment_payway_qr_pos/static/src/img/border-bottom-right.svg'"
+                            alt="border-bottom-right"
+                            class="position-absolute"
+                            style="bottom: 0; right: 0; width: 30px; height: 30px;"
+                        />
+
+                        <img
+                            class="pos-customer_payment_qr_code"
+                            t-att-src="props.qrCode"
+                            alt="QR Code"
+                            style="width: 200px; height: 200px; object-fit: contain; z-index: 1;"
+                        />
+                    </div>
+
+                    <!-- Logo -->
+                    <t t-if="props.qrCodeMethod == 'wechat'"> 
+                        <img 
+                            t-att-src="'/payment_payway_qr_pos/static/src/img/wechat_logo.svg'"
+                            alt="Wechat logo"
+                            width="65"
+                        />
+                    </t>
+                    <t t-else="">
+                        <img 
+                            t-att-src="'/payment_payway_qr_pos/static/src/img/alipay_logo.svg'"
+                            alt="Alipay logo"
+                            width="65"
+                        />
+                    </t>
+                    
+                    
+                </div> 
+            </Dialog>
+        </t>
+
+    </t>
+</templates>
+
+
+<!-- Inherit and replace point_of_sale.CustomerFacingQR 
+<templates id="template" xml:space="preserve">
+    <t t-inherit="point_of_sale.CustomerFacingQR" t-inherit-mode="extension" owl="1">
+        <xpath expr="//Dialog" position="replace">
+            <t t-if="props.qrCodeMethod == 'abapay_khqr'">
+                <Dialog footer="false" header="false">
+                    <div 
+                        class="text-center d-flex flex-column gap-3 justify-content-center align-items-center"
+                        style="background-color: #E8E9EC; gap: 2rem; padding: 1rem; border-radius: 16px;"
+                    >     
+                        <img 
+                            t-att-src="'/payment_payway_qr_pos/static/src/img/aba_pay_text.svg'" 
+                            alt="ABA Pay Logo"
+                            width="200"
+                        />
+                        <img class="pos-customer_payment_qr_code my-1" t-att-src="props.qrCode" alt="QR Code"/>
+                        <p class="fw-normal text-muted">Scan with ABA Mobile or any other mobile banking app that supports KHQR.</p>
+                   </div> 
+                </Dialog>
+            </t>
+
+            <t t-else="">
+                Fallback to original template by rendering the base again
+                <t t-call="point_of_sale.CustomerFacingQR"/>
+                <t t-keep="true"/>
+            </t>
+        </xpath>
+    </t>
+</templates> 
+-->
