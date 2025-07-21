@@ -12,16 +12,16 @@ class PayWayController(http.Controller):
         # Search data
         # pos_order = (request.env['pos.order'].sudo().search([('pos_reference', '=', 'Order 00167-009-0005'),],limit=1))
         # pos_order.confirm_qr_payment()
-
+        
         print("Send notification from backend")
-        data = request.get_json_data()
+        data = request.get_json_data()        
         channel_name = 'pos.order.payment.payway.' + data['tran_id']
-
+        
         # Send notification from backend
         request.env['bus.bus'].sudo()._sendone(
             channel_name,
             'notification',
-            data,
+            data,  
         )
 
         return "OK"

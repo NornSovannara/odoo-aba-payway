@@ -17,9 +17,8 @@ patch(QRPopup.prototype, {
         this.orm = useService("orm");
 
         this.state = useState({
-            qr_code_method: "",
-            qrLifetime: 0,
-            dynamic_body: this.props.body,
+            qrCodeMethod: this.props.line.payment_method_id.qr_code_method,
+            qrLifetime: this.props.line.payment_method_id.qr_lifetime,
             pollingInProgress: false,
             countDown: null,
         });
@@ -51,9 +50,10 @@ patch(QRPopup.prototype, {
     async _confirm() {
         // When button click confirm
 
-        if (PAYWAYQRCODEMETHOD.includes(this.state.qr_code_method)) {
+        if (PAYWAYQRCODEMETHOD.includes(this.state.qrCodeMethod)) {
             this.setButtonsDisabled(true);
             let is_payment_complete = false;
+
             try {
                 is_payment_complete = await this.orm.call("pos.payment.method", "payway_verify_transaction", [
                     [this.props.line.payment_method_id.id],
@@ -90,7 +90,7 @@ patch(QRPopup.prototype, {
 
     async _cancel() {
 
-        if (PAYWAYQRCODEMETHOD.includes(this.state.qr_code_method)) {
+        if (PAYWAYQRCODEMETHOD.includes(this.state.qrCodeMethod)) {
             await this.orm.call("pos.payment.method", "payway_cancel_transaction", [
                 [this.props.line.payment_method_id.id],
                 this.props.order.pos_reference,
@@ -109,24 +109,15 @@ patch(QRPopup.prototype, {
     async _initializePaywayQRPayment() {
 
         const pm_line = this.props.line;
-        let qr_code_method = '';
 
         try {
             // Fetch QR Payment Method from the server
-            qr_code_method = await this.orm.call("pos.payment.method", "get_payway_qr_code_method", [
-                [pm_line.payment_method_id.id]
-            ]);
-            this.state.qr_code_method = qr_code_method;
+            // qr_code_method = await this.orm.call("pos.payment.method", "get_payway_qr_code_method", [[pm_line.payment_method_id.id]]);                        
 
-            if (PAYWAYQRCODEMETHOD.includes(qr_code_method)) {
-                this.state.dynamic_body = "Awaiting Payments...";
+            if (PAYWAYQRCODEMETHOD.includes(this.state.qrCodeMethod)) {
 
                 // Fetch the qr life time (in minute)
-                let qrLifetime = await this.orm.call("pos.payment.method", "get_payway_qr_lifetime", [
-                    [pm_line.payment_method_id.id]
-                ]);
-                this.state.qrLifetime = qrLifetime;
-                console.log(this.state.qrLifetime);
+                // let qrLifetime = await this.orm.call("pos.payment.method", "get_payway_qr_lifetime", [[pm_line.payment_method_id.id]]);                
 
                 this._startPaymentCountDown(this.state.qrLifetime * 60);
                 this.pollingStartTime = Date.now();
@@ -145,7 +136,7 @@ patch(QRPopup.prototype, {
             return;
         }
 
-        if (!PAYWAYQRCODEMETHOD.includes(this.state.qr_code_method)) {
+        if (!PAYWAYQRCODEMETHOD.includes(this.state.qrCodeMethod)) {
             this._clearAllPaymentTimers();
             this.state.pollingInProgress = false;
             return;
@@ -176,7 +167,7 @@ patch(QRPopup.prototype, {
     },
 
     _startPaymentPollingVerification() {
-        if (!PAYWAYQRCODEMETHOD.includes(this.state.qr_code_method)) {
+        if (!PAYWAYQRCODEMETHOD.includes(this.state.qrCodeMethod)) {
             return;
         }
 
@@ -206,7 +197,7 @@ patch(QRPopup.prototype, {
 
 
     _startPaymentCountDown(duration) {
-        if (!PAYWAYQRCODEMETHOD.includes(this.state.qr_code_method)) {
+        if (!PAYWAYQRCODEMETHOD.includes(this.state.qrCodeMethod)) {
             return;
         }
 

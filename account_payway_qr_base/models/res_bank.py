@@ -80,7 +80,7 @@ class ResBank(models.Model):
 
     payway_environment = fields.Selection(
         [('production', 'Production'), ('sandbox', 'Sandbox')],
-        string='PayWay Environment',
+        string='PayWay Environment',        
         help='Select the environment for PayWay integration.',
     )
 
@@ -103,59 +103,30 @@ class ResBank(models.Model):
         # Raise error msg
 
         if currency.name not in ['USD']:
-            return _(
-                "You cannot generate a Payway QR code with a currency other than USD"
-            )
-
+            return _("You cannot generate a Payway QR code with a currency other than USD")
+        
         if self.sudo().payway_environment == 'production':
-            if not self.sudo().production_payway_merchant_id:
-                raise ValidationError(
-                    _(
-                        "For Production environment, the 'PayWay Merchant ID' is required."
-                    )
-                )
-            if not self.sudo().production_payway_public_key:
-                raise ValidationError(
-                    _(
-                        "For Production environment, the 'PayWay public key' is required."
-                    )
-                )
-
+                if not self.sudo().production_payway_merchant_id:
+                    raise ValidationError(_("For Production environment, the 'PayWay Merchant ID' is required."))
+                if not self.sudo().production_payway_public_key:
+                    raise ValidationError(_("For Production environment, the 'PayWay public key' is required."))
+                
         elif self.sudo().payway_environment == 'sandbox':
             if not self.sudo().sandbox_payway_merchant_id:
-                raise ValidationError(
-                    _(
-                        "For Sandbox environment, the 'Sandbox PayWay Merchant ID' is required."
-                    )
-                )
+                raise ValidationError(_("For Sandbox environment, the 'Sandbox PayWay Merchant ID' is required."))
             if not self.sudo().sandbox_payway_public_key:
-                raise ValidationError(
-                    _(
-                        "For Sandbox environment, the 'Sandbox PayWay public key' is required."
-                    )
-                )
+                raise ValidationError(_("For Sandbox environment, the 'Sandbox PayWay public key' is required."))
 
         return super()._get_error_messages_for_qr(qr_method, debtor_partner, currency)
+    
 
-    def _get_qr_vals(
-        self,
-        qr_method,
-        amount,
-        currency,
-        debtor_partner,
-        free_communication,
-        structured_communication,
-    ):
-
+    def _get_qr_vals(self, qr_method, amount, currency, debtor_partner, free_communication, structured_communication):
+        
         if qr_method in const.PAYMENT_METHODS_CODES:
 
-            model = self._context.get('model')
+            model = self._context.get('model')            
             qr_type = self._context.get('qr_type')
-            qr_tran_id = (
-                self._context.get('qr_tran_id').split(" ")[-1]
-                if self._context.get('qr_tran_id')
-                else ""
-            )
+            qr_tran_id = self._context.get('qr_tran_id').split(" ")[-1] if self._context.get('qr_tran_id') else ""
 
             print(
                 model,
@@ -164,7 +135,7 @@ class ResBank(models.Model):
                 self.sandbox_payway_public_key,
                 self.sandbox_payway_merchant_id,
                 self.payway_environment,
-                qr_tran_id,
+                qr_tran_id
             )
 
             api_url, merchant_id, api_key = self._payway_get_api_cred()
@@ -173,12 +144,8 @@ class ResBank(models.Model):
             base_odoo_url = (
                 self.env['ir.config_parameter'].sudo().get_param('web.base.url')
             )
-            webhook_url = (
-                urljoin(base_odoo_url, '/pos/payway/webhook')
-                if model == 'pos.order'
-                else ''
-            )
-
+            webhook_url = urljoin(base_odoo_url, '/pos/payway/webhook') if model == 'pos.order' else ''
+            
             payload = {
                 'req_time': datetime.now().strftime("%Y%m%d%H%M%S"),
                 'merchant_id': merchant_id,
@@ -191,12 +158,7 @@ class ResBank(models.Model):
                 'payment_option': qr_method,
                 'currency': currency.name.upper(),
                 'lifetime': self.qr_lifetime,
-                'qr_image_template': (
-                    'template2'
-                    if model == 'pos.order'
-                    and qr_type == const.POS_ORDER_QR_TYPE['bill']
-                    else 'template3_color'
-                ),
+                'qr_image_template': 'template2' if model == 'pos.order' and qr_type == const.POS_ORDER_QR_TYPE['bill'] else 'template4_color',
                 'callback_url': base64.b64encode(webhook_url.encode('utf-8')).decode(
                     'utf-8'
                 ),
@@ -207,14 +169,7 @@ class ResBank(models.Model):
 
             return api_url, payload
 
-        return super()._get_qr_vals(
-            qr_method,
-            amount,
-            currency,
-            debtor_partner,
-            free_communication,
-            structured_communication,
-        )
+        return super()._get_qr_vals(qr_method, amount, currency, debtor_partner, free_communication, structured_communication)
 
     def _get_qr_code_generation_params(
         self,
@@ -225,9 +180,9 @@ class ResBank(models.Model):
         free_communication,
         structured_communication,
     ):
-
-        if qr_method in const.PAYMENT_METHODS_CODES:
-
+        
+        if qr_method in const.PAYMENT_METHODS_CODES:            
+            
             api_url, payload = self._get_qr_vals(
                 qr_method,
                 amount,
@@ -236,7 +191,7 @@ class ResBank(models.Model):
                 free_communication,
                 structured_communication,
             )
-
+        
             response = _make_payway_api_request(
                 api_url, '/api/payment-gateway/v1/payments/generate-qr', payload
             )
@@ -247,14 +202,14 @@ class ResBank(models.Model):
 
             if qr_method == const.PAYMENT_METHODS_MAPPING['abapay_khqr']:
                 return response['qrImage']
-
+            
             else:
                 return {
-                    'barcode_type': 'QR',
-                    'width': 150,
-                    'height': 150,
-                    'value': response['qrString'],
-                }
+                'barcode_type': 'QR',
+                'width': 150,
+                'height': 150,
+                'value': response['qrString'],
+            }
 
         return super()._get_qr_code_generation_params(
             qr_method,
@@ -274,10 +229,10 @@ class ResBank(models.Model):
         free_communication,
         structured_communication,
     ):
-        if qr_method == const.PAYMENT_METHODS_MAPPING['abapay_khqr']:
+        if qr_method == const.PAYMENT_METHODS_MAPPING['abapay_khqr']:            
             # Return base64 qr directly for abapay_khqr
             return self._get_qr_code_generation_params(
-                qr_method,
+                qr_method, 
                 amount,
                 currency,
                 debtor_partner,
@@ -292,7 +247,7 @@ class ResBank(models.Model):
             debtor_partner,
             free_communication,
             structured_communication,
-        )
+        )    
 
     # === BUSINESS METHODS ===#
 
@@ -324,6 +279,7 @@ class ResBank(models.Model):
             return response
 
         raise ValidationError(response['status']['message'])
+    
 
     def _payway_api_check_transaction(self, qr_tran_id: str):
         """Check payway transaction.
@@ -348,6 +304,7 @@ class ResBank(models.Model):
             return response
 
         raise ValidationError(response['status']['message'])
+
 
     def _payway_get_api_cred(self):
         """Return the URL of the API corresponding to the selected payway environment.
