@@ -9,8 +9,7 @@
                     class="text-center d-flex flex-column gap-3 justify-content-center align-items-center"
                     style="background-color: #E8E9EC; gap: 2rem; padding: 1rem; border-radius: 16px;"
                 >
-                    <img class="pos-customer_payment_qr_code my-1" t-att-src="props.qrCode" alt="QR Code"/>
-                    <p class="fw-normal text-muted">Scan with ABA Mobile or any other mobile banking app that supports KHQR.</p>
+                    <img class="pos-customer_payment_qr_code my-1" t-att-src="props.qrCode" alt="QR Code"/>                   
                 </div>
             </Dialog>
         </t>
