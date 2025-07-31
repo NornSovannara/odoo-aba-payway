@@ -2,23 +2,14 @@ import hashlib
 import hmac
 import base64
 import json
-import logging
 from datetime import datetime
 from urllib.parse import urljoin
 import requests
-import base64
-
 
 from odoo import _, api, fields, models
 from odoo.addons.account_payway_qr_base import const
+from odoo.addons.payment import utils as payment_utils
 from odoo.exceptions import ValidationError
-
-"""
-Configuration API key
-Set up payment method
-Get API params
-"""
-_logger = logging.getLogger(__name__)
 
 MAX_RETRY = 2
 
@@ -32,7 +23,7 @@ def _make_payway_api_request(base_url: str, endpoint: str, payload: dict):
     for attempt in range(MAX_RETRY + 1):
         try:
             response = requests.post(
-                url, headers=headers, data=json.dumps(payload), verify=False
+                url, headers=headers, data=json.dumps(payload), verify=True
             )
 
             if response.status_code != 200:
@@ -64,8 +55,8 @@ class ResBank(models.Model):
         string='PayWay Merchant ID',
         help='The Merchant ID solely used to identify your PayWay account.',
     )
-    production_payway_public_key = fields.Char(
-        string='PayWay public key',
+    production_payway_key = fields.Char(
+        string='PayWay key',
         groups='base.group_system',
     )
 
@@ -73,49 +64,71 @@ class ResBank(models.Model):
         string='Sandbox PayWay Merchant ID',
         help='The Merchant ID solely used to identify your PayWay account.',
     )
-    sandbox_payway_public_key = fields.Char(
-        string='Sandbox PayWay public key',
+    sandbox_payway_key = fields.Char(
+        string='Sandbox PayWay key',
         groups='base.group_system',
     )
 
     payway_environment = fields.Selection(
         [('production', 'Production'), ('sandbox', 'Sandbox')],
-        string='PayWay Environment',        
+        string='PayWay Environment',    
         help='Select the environment for PayWay integration.',
     )
 
-    qr_lifetime = fields.Integer(
-        string='QR Code Lifetime (Minute)',
-        default=5,
-        help='The lifetime of the QR code in minutes. After this time, the QR code will no longer be valid.',
+    digital_qr_lifetime = fields.Integer(
+        string='Digital QR Code Lifetime (Minute)',
+        default=3,
+        required=True,
+        help='The lifetime of the QR code display on screen in minutes. After this time, the QR code will no longer be valid.',
     )
+
+    bill_qr_lifetime = fields.Integer(
+        string='Bill QR Code Lifetime (Minute)',
+        default=10,
+        required=True,
+        help='The lifetime of the QR code printed on bill in minutes. After this time, the QR code will no longer be valid.',
+    )
+
+    @api.constrains('digital_qr_lifetime', 'bill_qr_lifetime')
+    def _check_qr_lifetimes(self):        
+        for record in self:
+            if not isinstance(record.digital_qr_lifetime, int) or record.digital_qr_lifetime < 1:
+                raise ValidationError('Digital QR Code Lifetime must be an integer and at least 1 minute.')
+            if not isinstance(record.bill_qr_lifetime, int) or record.bill_qr_lifetime < 1:
+                raise ValidationError('Bill QR Code Lifetime must be an integer and at least 1 minute.')
+            
+            if record.digital_qr_lifetime > 43200 or record.bill_qr_lifetime > 43200:
+                raise ValidationError('QR Code Lifetime must not be greater than 30 Days.')
 
     @api.model
     def _get_available_qr_methods(self):
         """Extend the base list of QR methods."""
         res = super()._get_available_qr_methods()
-        res.append(('abapay_khqr', _("AbaPay KHQR"), 10))
-        res.append(('wechat', _("WeChat Pay"), 10))
-        res.append(('alipay', _("Alipay"), 10))
+        res.append(('abapay_khqr', _('AbaPay KHQR'), 10))
+        res.append(('wechat', _('WeChat Pay'), 10))
+        res.append(('alipay', _('Alipay'), 10))
         return res
 
     def _get_error_messages_for_qr(self, qr_method, debtor_partner, currency):
         # Raise error msg
 
-        if currency.name not in ['USD']:
-            return _("You cannot generate a Payway QR code with a currency other than USD")
+        if currency.name not in ['USD', 'KHR']:
+            return _('This payment method only supports transactions in USD or KHR currency.\nTo continue, please update your store currency and try again.')
         
+        if qr_method in const.PAYMENT_METHODS_CODES and not self.sudo().payway_environment:
+            return _('Please select PayWay Environment to generate a PayWay QR code.')
+
         if self.sudo().payway_environment == 'production':
-                if not self.sudo().production_payway_merchant_id:
-                    raise ValidationError(_("For Production environment, the 'PayWay Merchant ID' is required."))
-                if not self.sudo().production_payway_public_key:
-                    raise ValidationError(_("For Production environment, the 'PayWay public key' is required."))
-                
+            if not self.sudo().production_payway_merchant_id:
+                raise ValidationError(_("For Production environment, the 'PayWay Merchant ID' is required."))
+            if not self.sudo().production_payway_key:
+                raise ValidationError(_("For Production environment, the 'PayWay key' is required."))
+
         elif self.sudo().payway_environment == 'sandbox':
             if not self.sudo().sandbox_payway_merchant_id:
                 raise ValidationError(_("For Sandbox environment, the 'Sandbox PayWay Merchant ID' is required."))
-            if not self.sudo().sandbox_payway_public_key:
-                raise ValidationError(_("For Sandbox environment, the 'Sandbox PayWay public key' is required."))
+            if not self.sudo().sandbox_payway_key:
+                raise ValidationError(_("For Sandbox environment, the 'Sandbox PayWay key' is required."))
 
         return super()._get_error_messages_for_qr(qr_method, debtor_partner, currency)
     
@@ -124,41 +137,38 @@ class ResBank(models.Model):
         
         if qr_method in const.PAYMENT_METHODS_CODES:
 
-            model = self._context.get('model')            
+            model = self._context.get('model')
             qr_type = self._context.get('qr_type')
             qr_tran_id = self._context.get('qr_tran_id').split(" ")[-1] if self._context.get('qr_tran_id') else ""
-
-            print(
-                model,
-                self.production_payway_merchant_id,
-                self.production_payway_public_key,
-                self.sandbox_payway_public_key,
-                self.sandbox_payway_merchant_id,
-                self.payway_environment,
-                qr_tran_id
-            )
 
             api_url, merchant_id, api_key = self._payway_get_api_cred()
             self._payway_api_close_transaction(qr_tran_id)
 
+            base_odoo_url:str = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
             base_odoo_url = (
-                self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+                base_odoo_url.replace('http://', 'https://', 1)
+                if base_odoo_url and base_odoo_url.startswith('http://') else base_odoo_url
             )
-            webhook_url = urljoin(base_odoo_url, '/pos/payway/webhook') if model == 'pos.order' else ''
+            webhook_url = urljoin(base_odoo_url, const.WEB_HOOK_PATH['pos']) if model == 'pos.order' else ''            
             
             payload = {
                 'req_time': datetime.now().strftime("%Y%m%d%H%M%S"),
                 'merchant_id': merchant_id,
-                'tran_id': qr_tran_id,
-                # 'first_name': self.partner_id.name.split()[0],
-                # 'last_name': self.partner_id.name.split()[-1],
+                'tran_id': qr_tran_id,                
                 'email': self.partner_id.email,
                 'phone': self.partner_id.phone,
                 'amount': amount,
                 'payment_option': qr_method,
                 'currency': currency.name.upper(),
-                'lifetime': self.qr_lifetime,
-                'qr_image_template': 'template2' if model == 'pos.order' and qr_type == const.POS_ORDER_QR_TYPE['bill'] else 'template4_color',
+                'lifetime': (
+                    self.bill_qr_lifetime 
+                    if qr_type == const.POS_ORDER_QR_TYPE['bill'] else 
+                    self.digital_qr_lifetime
+                ),
+                'qr_image_template': (
+                    'template2' if model == 'pos.order' and 
+                    qr_type == const.POS_ORDER_QR_TYPE['bill'] else 'template3_color'
+                ),
                 'callback_url': base64.b64encode(webhook_url.encode('utf-8')).decode(
                     'utf-8'
                 ),
@@ -181,7 +191,7 @@ class ResBank(models.Model):
         structured_communication,
     ):
         
-        if qr_method in const.PAYMENT_METHODS_CODES:            
+        if qr_method in const.PAYMENT_METHODS_CODES:
             
             api_url, payload = self._get_qr_vals(
                 qr_method,
@@ -229,7 +239,7 @@ class ResBank(models.Model):
         free_communication,
         structured_communication,
     ):
-        if qr_method == const.PAYMENT_METHODS_MAPPING['abapay_khqr']:            
+        if qr_method == const.PAYMENT_METHODS_MAPPING['abapay_khqr']:
             # Return base64 qr directly for abapay_khqr
             return self._get_qr_code_generation_params(
                 qr_method, 
@@ -247,9 +257,7 @@ class ResBank(models.Model):
             debtor_partner,
             free_communication,
             structured_communication,
-        )    
-
-    # === BUSINESS METHODS ===#
+        )
 
     def _payway_api_close_transaction(self, qr_tran_id: str):
         """Close payway transaction.
@@ -319,14 +327,14 @@ class ResBank(models.Model):
             return (
                 api_url,
                 self.production_payway_merchant_id,
-                self.production_payway_public_key,
+                self.production_payway_key,
             )
         else:
             api_url = const.API_URLS['sandbox']
             return (
                 api_url,
                 self.sandbox_payway_merchant_id,
-                self.sandbox_payway_public_key,
+                self.sandbox_payway_key,
             )
 
     def _payway_calculate_payment_secure_hash(self, api_key: str, payload: dict):

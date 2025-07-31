@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
-<!-- Create my own template -->
 <templates id="template" xml:space="preserve">
     
+    <!-- background-color: #E8E9EC;  -->
     <t t-name="payment_payway_qr_pos.PaywayCustomerFacingQR">
         <t t-if="props.qrCodeMethod == 'abapay_khqr'">
             <Dialog footer="false" header="false">
@@ -10,11 +9,6 @@
                     class="text-center d-flex flex-column gap-3 justify-content-center align-items-center"
                     style="background-color: #E8E9EC; gap: 2rem; padding: 1rem; border-radius: 16px;"
                 >
-                    <img 
-                        t-att-src="'/payment_payway_qr_pos/static/src/img/aba_pay_text.svg'"
-                        alt="ABA Pay Logo"
-                        width="200"
-                    />
                     <img class="pos-customer_payment_qr_code my-1" t-att-src="props.qrCode" alt="QR Code"/>
                     <p class="fw-normal text-muted">Scan with ABA Mobile or any other mobile banking app that supports KHQR.</p>
                 </div>
@@ -29,10 +23,10 @@
                     style="background-color: #E8E9EC; padding: 1rem; border-radius: 16px;"
                 >
                     <p style="font-size: 1.3rem; font-weight: bold; color: black; margin-top: 0.5rem;">
-                        32.65 <span style="font-size: 1rem; font-weight: normal; color: #555;">USD</span>
+                        <t t-out="props.amount"/> <span style="font-size: 1rem; font-weight: normal; color: #555;">USD</span>
                     </p>
 
-                    <div class="position-relative d-flex justify-content-center align-items-center my-3" style="width: 250px; height: 250px;">               
+                    <div class="position-relative d-flex justify-content-center align-items-center my-3" style="width: 250px; height: 250px;">
                         <div class="position-absolute translate-middle-y text-dark fw-medium" style="top: 0.1rem; font-size: 16px; z-index: 2;">
                             Scan to pay
                         </div>
@@ -92,43 +86,8 @@
                             width="65"
                         />
                     </t>
-                    
-                    
                 </div> 
             </Dialog>
         </t>
-
     </t>
 </templates>
-
-
-<!-- Inherit and replace point_of_sale.CustomerFacingQR 
-<templates id="template" xml:space="preserve">
-    <t t-inherit="point_of_sale.CustomerFacingQR" t-inherit-mode="extension" owl="1">
-        <xpath expr="//Dialog" position="replace">
-            <t t-if="props.qrCodeMethod == 'abapay_khqr'">
-                <Dialog footer="false" header="false">
-                    <div 
-                        class="text-center d-flex flex-column gap-3 justify-content-center align-items-center"
-                        style="background-color: #E8E9EC; gap: 2rem; padding: 1rem; border-radius: 16px;"
-                    >     
-                        <img 
-                            t-att-src="'/payment_payway_qr_pos/static/src/img/aba_pay_text.svg'" 
-                            alt="ABA Pay Logo"
-                            width="200"
-                        />
-                        <img class="pos-customer_payment_qr_code my-1" t-att-src="props.qrCode" alt="QR Code"/>
-                        <p class="fw-normal text-muted">Scan with ABA Mobile or any other mobile banking app that supports KHQR.</p>
-                   </div> 
-                </Dialog>
-            </t>
-
-            <t t-else="">
-                Fallback to original template by rendering the base again
-                <t t-call="point_of_sale.CustomerFacingQR"/>
-                <t t-keep="true"/>
-            </t>
-        </xpath>
-    </t>
-</templates> 
--->

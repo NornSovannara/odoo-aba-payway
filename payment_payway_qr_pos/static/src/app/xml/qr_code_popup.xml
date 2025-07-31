@@ -1,21 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates id="template" xml:space="preserve">
     <t t-inherit="point_of_sale.QRConfirmationDialog" t-inherit-mode="extension">
-
-        <!-- <xpath expr="//img[contains(@t-att-src, 'props.qrCode')]" position="replace">
-            <t t-if="state.qrCodeMethod === 'abapay_khqr' || state.qrCodeMethod === 'wechat' || state.qrCodeMethod === 'alipay'">
-                <img t-att-src="props.qrCode" alt="QR Code"/>
-            </t>
-        </xpath> -->
-
+        
         <xpath expr="//div[@class='mt-1']" position="after">
-            <t t-if="state.qrCodeMethod === 'abapay_khqr' || state.qrCodeMethod === 'wechat' || state.qrCodeMethod === 'alipay'">
+            <t t-if="paywayQRState.qrCodeMethod === 'abapay_khqr' || paywayQRState.qrCodeMethod === 'wechat' || paywayQRState.qrCodeMethod === 'alipay'">
                 <div class="mt-2 text-center">
                     <p>
                         <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
                         Awaiting Payments...
                     </p>
-                    <p><t t-out="state.countDown" /></p>
+                    <p><t t-out="paywayQRState.countDown" /></p>
                 </div>
             </t>
         </xpath>
@@ -24,9 +18,10 @@
             <attribute name="style"></attribute>
         </xpath>
 
-        <!-- <xpath expr="//button[@t-on-click='_confirm']" position="attributes">
-            <attribute name="class" add="btn-secondary" remove="btn-primary" separator=" " />
-        </xpath> -->
-        
+        <xpath expr="//button[@t-on-click='_confirm']" position="attributes">
+            <attribute name="t-att-class">
+                paywayQRState.qrCodeMethod === 'abapay_khqr' || paywayQRState.qrCodeMethod === 'wechat' || paywayQRState.qrCodeMethod === 'alipay' ? 'visually-hidden' : ''
+            </attribute>
+        </xpath>        
     </t>
 </templates>

@@ -45,3 +45,7 @@ POS_ORDER_QR_TYPE = {
     'screen': 'screen',
     'bill': 'bill',
 }
+
+WEB_HOOK_PATH = {
+    'pos': '/pos/payway/webhook',
+}
