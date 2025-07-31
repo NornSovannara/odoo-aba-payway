@@ -13,10 +13,17 @@ class PosPaymentMethod(models.Model):
         default=False,
     )
 
-    qr_lifetime = fields.Integer(
-        string="QR Lifetime (Minute)",
-        related='journal_id.bank_account_id.qr_lifetime',
-        help="The duration in minute for which the generated QR code is valid. Inherited from the linked bank account.",
+    digital_qr_lifetime = fields.Integer(
+        string="Digital QR Code Lifetime (Minute)",
+        related='journal_id.bank_account_id.digital_qr_lifetime',
+        help="The lifetime of the QR code display on screen in minutes. After this time, the QR code will no longer be valid.",
+        readonly=True,
+    )
+
+    bill_qr_lifetime = fields.Integer(
+        string="Bill QR Code Lifetime (Minute)",
+        related='journal_id.bank_account_id.bill_qr_lifetime',
+        help="The lifetime of the QR code printed on bill in minutes. After this time, the QR code will no longer be valid.",
         readonly=True,
     )
 
@@ -33,10 +40,8 @@ class PosPaymentMethod(models.Model):
         if self.payment_method_type == 'qr_code' or self.qr_code_method in const.PAYMENT_METHODS_CODES:
 
             qr_type = self._context.get('qr_type')
-            if qr_type == "bill" and not self.allow_qr_on_bill:
-
-                # Raise an error if the QR code is not allowed on the bill
-                raise UserError(_("This payment method is not allowed to print on bill."))                
+            if qr_type == 'bill' and not self.allow_qr_on_bill:
+                return False
 
         return super().get_qr_code(
             amount,
@@ -68,22 +73,17 @@ class PosPaymentMethod(models.Model):
 
         payment_bank = self.journal_id.bank_account_id
         response = payment_bank._payway_api_check_transaction(qr_tran_id)
-
-        print("Verify transaction response", response)
+        
         is_payment_complete = str(response['data']['payment_status_code']) == '0'
-        return is_payment_complete        
+        return is_payment_complete
 
     @api.model
     def _load_pos_data_fields(self, config_id):
         res = super()._load_pos_data_fields(config_id)
         
-        if 'qr_code_method' not in res:
-            res.append('qr_code_method')
-
-        if 'qr_lifetime' not in res:
-            res.append('qr_lifetime')
-
-        if 'allow_qr_on_bill' not in res:
-            res.append('allow_qr_on_bill')
+        fields = ['qr_code_method', 'digital_qr_lifetime', 'bill_qr_lifetime', 'allow_qr_on_bill']
+        for field in fields:
+            if field not in res:
+                res.append(field)        
         
         return res

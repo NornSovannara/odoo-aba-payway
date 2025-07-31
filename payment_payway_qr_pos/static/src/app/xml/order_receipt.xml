@@ -1,19 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates id="template" xml:space="preserve">
     <t t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension" owl="1">
-
         <xpath expr="//div[hasclass('pos-receipt')]" position="inside">
-            <div class="text-center mt-3">
-                <p>Scan ABA KHQR to Pay</p>
-            </div>
-
-            <t t-if="state.qr_image">
-                <img t-att-src="state.qr_image" alt="QR Code"/>
+            <t t-if="props.data.payway_qr_image and props.data.state == 'draft'">
+                <img class="mt-1" t-att-src="props.data.payway_qr_image" alt="Bill QR Code" />
             </t>
-
-            <img t-att-src="qr_image" alt="QR"/>
-        
-            <t t-out="props.data.pos_qr_code"/>
         </xpath>
     </t>
 </templates>

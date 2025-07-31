@@ -7,6 +7,7 @@
     'category': 'Point of Sale',
     'depends': [
         'point_of_sale',
+        'pos_restaurant',
         'account_payway_qr_base',
     ],
     'data': [

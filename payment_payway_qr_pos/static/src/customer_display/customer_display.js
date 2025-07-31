@@ -1,11 +1,10 @@
-/** @odoo-module **/
-
 import { patch } from "@web/core/utils/patch";
 import { CustomerDisplay } from "@point_of_sale/customer_display/customer_display";
 import { CustomerFacingQR } from "@point_of_sale/customer_display/customer_facing_qr";
 import { useEffect } from "@odoo/owl";
 
 import { PaywayCustomerFacingQR } from "./payway_customer_facing_qr";
+import { PAYWAYQRCODEMETHOD } from "./const";
 
 patch(CustomerDisplay.prototype, {
     setup() {
@@ -19,8 +18,7 @@ patch(CustomerDisplay.prototype, {
                 if (qrPaymentData) {
                     let ComponentToOpen = CustomerFacingQR;
 
-
-                    if (['abapay_khqr', 'wechat', 'alipay'].includes(qrPaymentData.qrCodeMethod)) {
+                    if (PAYWAYQRCODEMETHOD.includes(qrPaymentData.qrCodeMethod)) {
                         ComponentToOpen = PaywayCustomerFacingQR;
                     }
 

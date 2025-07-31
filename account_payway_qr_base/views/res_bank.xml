@@ -6,17 +6,18 @@
         <field name="inherit_id" ref="base.view_partner_bank_form"/>
         <field name="arch" type="xml">
 
-            <xpath expr="//sheet" position="inside">               
+            <xpath expr="//sheet" position="inside">
                 <group string="Payway Configuration">
                     <field name="production_payway_merchant_id" string="Production Merchant ID"/>
-                    <field name="production_payway_public_key" string="Production Secure Public Key" password="True"/>
+                    <field name="production_payway_key" string="Production Secure Key" password="True"/>
                     
                     <field name="sandbox_payway_merchant_id" string="Sandbox Merchant ID"/>
-                    <field name="sandbox_payway_public_key" string="Sandbox Secure Public Key" password="True"/>
+                    <field name="sandbox_payway_key" string="Sandbox Secure Key" password="True"/>
                 
                     <field name="payway_environment"/>
                     
-                    <field name="qr_lifetime"/>
+                    <field name="digital_qr_lifetime"/>
+                    <field name="bill_qr_lifetime"/>
                 </group>
             </xpath>
         </field>
