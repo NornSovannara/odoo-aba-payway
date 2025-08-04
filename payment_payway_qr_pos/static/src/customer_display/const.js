@@ -1,1 +1,0 @@
-export const PAYWAYQRCODEMETHOD = ['alipay', 'wechat', 'abapay_khqr'];
