@@ -54,9 +54,7 @@ class PosPaymentMethod(models.Model):
 
         self.ensure_one()
         if self.payment_method_type != 'qr_code' or not self.qr_code_method in const.PAYMENT_METHODS_CODES:
-            return True
-        
-        qr_tran_id = qr_tran_id.split(" ")[-1]
+            return True            
 
         payment_bank = self.journal_id.bank_account_id
         payment_bank._payway_api_close_transaction(qr_tran_id)
@@ -65,9 +63,7 @@ class PosPaymentMethod(models.Model):
         
         self.ensure_one()
         if self.payment_method_type != 'qr_code' or not self.qr_code_method in const.PAYMENT_METHODS_CODES:
-            return True
-        
-        qr_tran_id = qr_tran_id.split(" ")[-1]
+            return True        
 
         payment_bank = self.journal_id.bank_account_id
         response = payment_bank._payway_api_check_transaction(qr_tran_id)
