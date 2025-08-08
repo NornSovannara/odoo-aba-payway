@@ -2,7 +2,7 @@ import { patch } from "@web/core/utils/patch";
 import { PaymentScreen } from "@point_of_sale/app/screens/payment_screen/payment_screen";
 import { _t } from "@web/core/l10n/translation";
 import { useService } from "@web/core/utils/hooks";
-import { onMounted, onWillUnmount, onWillStart } from "@odoo/owl";
+import { onMounted, onWillUnmount } from "@odoo/owl";
 
 import { PAYWAY_QR_CODE_METHOD } from "./const";
 
@@ -39,7 +39,7 @@ patch(PaymentScreen.prototype, {
             const qrCodeMethod = payment?.payment_method_id?.qr_code_method;
 
             if (PAYWAY_QR_CODE_METHOD.includes(qrCodeMethod)) {
-                this.channelName = "pos.order.payment.payway." + order.pos_reference.split(" ").at(-1);
+                this.channelName = "pos.order.payment.payway." + payment.transaction_id;
                 busService.addChannel(this.channelName);
                 busService.subscribe("notification", this._paywayWebhookHandler);
                 this._completeOrderPayway(false);
@@ -61,10 +61,9 @@ patch(PaymentScreen.prototype, {
             PAYWAY_QR_CODE_METHOD.includes(line.payment_method_id.qr_code_method)
         ) {
             if (!this.channelName) {
-                const order = this.pos.get_order();
                 const busService = this.env.services.bus_service;
 
-                this.channelName = "pos.order.payment.payway." + order.pos_reference.split(" ").at(-1);
+                this.channelName = "pos.order.payment.payway." + line.transaction_id;
                 busService.addChannel(this.channelName);
                 busService.subscribe("notification", this._paywayWebhookHandler);
             }
@@ -117,7 +116,7 @@ patch(PaymentScreen.prototype, {
         try {
             is_payment_complete = await this.orm.call("pos.payment.method", "payway_verify_transaction", [
                 [payment.payment_method_id.id],
-                order.pos_reference,
+                payment.transaction_id,
             ]);
 
         } catch (error) {

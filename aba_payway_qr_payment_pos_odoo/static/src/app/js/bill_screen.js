@@ -17,7 +17,7 @@ patch(BillScreen.prototype, {
 
     async _generateQrCode() {
         /** 
-         * Generate Paywya QR code for the printed bill in POS resturant.
+         * Generate Payway QR code for the printed bill in POS resturant.
          */
 
         const order = this.pos.get_order();
@@ -45,11 +45,11 @@ patch(BillScreen.prototype, {
                 return;
             }
 
+            payment.transaction_id = this.pos._paywayCreateTxnId(payment);
             user.updateContext({
                 model: MODEL,
                 qr_type: POS_ORDER_QR_TYPE["bill"],
-                model_id: payment.pos_order_id.uuid,
-                qr_tran_id: payment.pos_order_id.pos_reference
+                qr_tran_id: payment.transaction_id,
             });
 
             const qr = await this.orm.call("pos.payment.method", "get_qr_code", [

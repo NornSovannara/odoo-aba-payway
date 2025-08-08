@@ -49,7 +49,7 @@ patch(QRPopup.prototype, {
             try {
                 is_payment_complete = await this.orm.call("pos.payment.method", "payway_verify_transaction", [
                     [this.props.line.payment_method_id.id],
-                    this.props.order.pos_reference,
+                    this.props.line.transaction_id,
                 ]);
 
             }
@@ -83,7 +83,7 @@ patch(QRPopup.prototype, {
             if (PAYWAY_QR_CODE_METHOD.includes(this.paywayQRState.qrCodeMethod)) {
                 await this.orm.call("pos.payment.method", "payway_cancel_transaction", [
                     [this.props.line.payment_method_id.id],
-                    this.props.order.pos_reference,
+                    this.props.line.transaction_id,
                 ])
             };
         }
@@ -113,7 +113,7 @@ patch(QRPopup.prototype, {
         try {
             is_payment_complete = await this.orm.call("pos.payment.method", "payway_verify_transaction", [
                 [this.props.line.payment_method_id.id],
-                this.props.order.pos_reference,
+                this.props.line.transaction_id,
             ]);
 
         } catch {

@@ -141,7 +141,7 @@ class ResBank(models.Model):
 
             model = self._context.get('model')
             qr_type = self._context.get('qr_type')
-            qr_tran_id = self._context.get('qr_tran_id').split(" ")[-1] if self._context.get('qr_tran_id') else ""
+            qr_tran_id = self._context.get('qr_tran_id') if self._context.get('qr_tran_id') else ""
 
             api_url, merchant_id, api_key = self._payway_get_api_cred()
             self._payway_api_close_transaction(qr_tran_id)

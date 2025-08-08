@@ -2,7 +2,8 @@
     'name': 'ABA PayWay Base Configuration',
     'countries': ['KH'],
     'version': '1.0',
-    'category': 'Accounting/Payment',
+    # hiddeen/tool
+    'category': 'Accounting/Payment', 
     'summary': 'Base module to configure your API keys and connect ABA PayWay to Odoo.',
     'description': """
         This is the base module to set up ABA PayWay in Odoo. \n
