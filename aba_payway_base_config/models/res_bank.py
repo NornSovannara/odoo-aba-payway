@@ -169,7 +169,7 @@ class ResBank(models.Model):
                 ),
                 'qr_image_template': (
                     'template2' if model == 'pos.order' and 
-                    qr_type == const.POS_ORDER_QR_TYPE['bill'] else 'template3_color'
+                    qr_type == const.POS_ORDER_QR_TYPE['bill'] else 'template1_color'
                 ),
                 'callback_url': base64.b64encode(webhook_url.encode('utf-8')).decode(
                     'utf-8'
@@ -212,11 +212,7 @@ class ResBank(models.Model):
                 # Payway return error
                 raise ValidationError(response['status']['message'])
 
-            if qr_method == const.PAYMENT_METHODS_MAPPING['abapay_khqr']:
-                return response['qrImage']
-            
-            else:
-                return {
+            return {
                 'barcode_type': 'QR',
                 'width': 150,
                 'height': 150,
@@ -241,17 +237,7 @@ class ResBank(models.Model):
         free_communication,
         structured_communication,
     ):
-        if qr_method == const.PAYMENT_METHODS_MAPPING['abapay_khqr']:
-            # Return base64 qr directly for abapay_khqr
-            return self._get_qr_code_generation_params(
-                qr_method, 
-                amount,
-                currency,
-                debtor_partner,
-                free_communication,
-                structured_communication,
-            )
-
+        
         return super()._get_qr_code_base64(
             qr_method,
             amount,
