@@ -31,10 +31,15 @@
     'assets': {
         'point_of_sale._assets_pos': [
             'aba_payway_qr_payment_pos_odoo/static/src/app/**/*',
+            'aba_payway_qr_payment_pos_odoo/static/src/img/**/*',
+            'aba_payway_qr_payment_pos_odoo/static/src/fonts/**/*',
+            'aba_payway_qr_payment_pos_odoo/static/src/style/**/*'
         ],
         'point_of_sale.customer_display_assets': [
             'aba_payway_qr_payment_pos_odoo/static/src/customer_display/**/*',
-            'aba_payway_qr_payment_pos_odoo/static/src/img/**/*'
+            'aba_payway_qr_payment_pos_odoo/static/src/img/**/*',
+            'aba_payway_qr_payment_pos_odoo/static/src/fonts/**/*',
+            'aba_payway_qr_payment_pos_odoo/static/src/style/**/*'
         ]
     },
     'installable': True,

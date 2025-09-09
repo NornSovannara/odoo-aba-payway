@@ -1,3 +1,4 @@
+import { registry } from "@web/core/registry";
 import { QRPopup } from "@point_of_sale/app/utils/qr_code_popup/qr_code_popup";
 import { _t } from "@web/core/l10n/translation";
 import { patch } from "@web/core/utils/patch";
@@ -8,6 +9,7 @@ import { onMounted, onWillUnmount } from "@odoo/owl";
 import { PAYWAY_QR_CODE_METHOD } from "./const";
 
 const FIFTENNSEC = 15 * 1000;
+const formatCurrency = registry.subRegistries.formatters.content.monetary[1];
 
 patch(QRPopup.prototype, {
 
@@ -22,6 +24,10 @@ patch(QRPopup.prototype, {
             DigitalQrLifetime: digitalQrLifetime,
             pollingInProgress: false,
             countDown: null,
+
+            currency_name: this.props.order.currency.name,
+            displayAmount: formatCurrency(this.props.order.get_total_with_tax() || 0, false),
+            merchantDisplayName: this.props.order.session.config_id.display_name,
         });
 
         this.intervalPollingTimer = null;
