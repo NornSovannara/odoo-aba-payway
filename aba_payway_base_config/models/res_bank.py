@@ -92,7 +92,7 @@ class ResBank(models.Model):
     )
 
     @api.constrains('digital_qr_lifetime', 'bill_qr_lifetime')
-    def _check_qr_lifetimes(self):        
+    def _check_qr_lifetimes(self):
         for record in self:
             if not isinstance(record.digital_qr_lifetime, int) or record.digital_qr_lifetime < 1:
                 raise ValidationError("QR on screen expire time must be an integer and at least 1 minute.")
@@ -176,7 +176,7 @@ class ResBank(models.Model):
                 ),
             }
             payload.update(
-                {'hash': self._payway_calculate_payment_secure_hash(api_key, payload)}
+                {'hash': self._payway_calculate_payment_secure_hash(api_key, payload, const.QR_PAYMENT_SECURE_HASH_KEYS)}
             )
 
             return api_url, payload
@@ -261,7 +261,7 @@ class ResBank(models.Model):
             'tran_id': qr_tran_id,
         }
         payload.update(
-            {'hash': self._payway_calculate_check_txn_secure_hash(api_key, payload)}
+            {'hash': self._payway_calculate_payment_secure_hash(api_key, payload, const.CHECK_TXN_SECURE_HASH_KEYS)}
         )
         response = _make_payway_api_request(
             api_url, '/api/payment-gateway/v1/payments/close-transaction', payload
@@ -281,7 +281,7 @@ class ResBank(models.Model):
         """Check payway transaction.
 
         :return: transaction id.
-        :rtype: reponse dict
+        :rtype: response dict
         """
         api_url, merchant_id, api_key = self._payway_get_api_cred()
         payload = {
@@ -290,7 +290,7 @@ class ResBank(models.Model):
             'tran_id': qr_tran_id,
         }
         payload.update(
-            {'hash': self._payway_calculate_check_txn_secure_hash(api_key, payload)}
+            {'hash': self._payway_calculate_payment_secure_hash(api_key, payload, const.CHECK_TXN_SECURE_HASH_KEYS)}
         )
         response = _make_payway_api_request(
             api_url, '/api/payment-gateway/v1/payments/check-transaction-2', payload
@@ -301,6 +301,31 @@ class ResBank(models.Model):
 
         raise ValidationError(response['status']['message'])
 
+
+    def _payway_api_get_transaction_detail(self, qr_tran_id: str):
+        """Get payway transaction detail.
+
+        :return: transaction id.
+        :rtype: response dict
+        """
+        api_url, merchant_id, api_key = self._payway_get_api_cred()
+        payload = {
+            'req_time': datetime.now().strftime("%Y%m%d%H%M%S"),
+            'merchant_id': merchant_id,
+            'tran_id': qr_tran_id,
+        }
+        payload.update(
+            {'hash': self._payway_calculate_payment_secure_hash(api_key, payload, const.CHECK_TXN_SECURE_HASH_KEYS)}
+        )
+
+        response = _make_payway_api_request(
+            api_url, '/api/payment-gateway/v1/payments/transaction-detail', payload
+        )
+
+        if str(response['status']['code']) == '00':
+            return response
+
+        raise ValidationError(response['status']['message'])
 
     def _payway_get_api_cred(self):
         """Return the URL of the API corresponding to the selected payway environment.
@@ -325,7 +350,7 @@ class ResBank(models.Model):
                 self.sandbox_payway_key,
             )
 
-    def _payway_calculate_payment_secure_hash(self, api_key: str, payload: dict):
+    def _payway_calculate_payment_secure_hash(self, api_key: str, payload: dict, secure_hash_keys: list):
         """Compute the secure hash for the provided data according to the PayWay documentation.
 
         :param dict data: The data to hash.
@@ -333,24 +358,7 @@ class ResBank(models.Model):
         :rtype: str
         """
 
-        secure_hash_keys = const.PAYMENT_SECURE_HASH_KEYS
         data_to_sign = [str(payload.get(k, '')) for k in secure_hash_keys]
-        signing_string = ''.join(data_to_sign)
-        hmac_hash = hmac.new(
-            api_key.encode(), signing_string.encode(), hashlib.sha512
-        ).digest()
-        base64_encoded = base64.b64encode(hmac_hash).decode()
-        return base64_encoded
-
-    def _payway_calculate_check_txn_secure_hash(self, api_key: str, payload: dict):
-        """Compute the secure hash for the provided data according to the PayWay documentation for checking transaction.
-
-        :param dict data: The data to hash.
-        :return: The calculated hash.
-        :rtype: str
-        """
-        secure_hash_keys = const.CHECK_TXN_SECURE_HASH_KEYS
-        data_to_sign = [str(payload[k]) for k in secure_hash_keys]
         signing_string = ''.join(data_to_sign)
         hmac_hash = hmac.new(
             api_key.encode(), signing_string.encode(), hashlib.sha512
