@@ -8,8 +8,6 @@ patch(PosStore.prototype, {
 
     async showQR(payment) {
 
-        // Use Odoo receipt number for payway unique transaction id
-        payment.transaction_id = this._paywayCreateTxnId(payment);
         user.updateContext({
             model: MODEL,
             qr_type: POS_ORDER_QR_TYPE["screen"],
@@ -51,7 +49,7 @@ patch(PosStore.prototype, {
             .at(-1)
             .replaceAll("-", "");
 
-        const transaction_id = `P${formattedDate}${orderReference}`;
+        const transaction_id = `${formattedDate}${orderReference}`;
         return transaction_id;
     }
 });
