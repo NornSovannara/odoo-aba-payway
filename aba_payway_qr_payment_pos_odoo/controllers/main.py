@@ -1,4 +1,5 @@
 import logging
+import pprint
 
 from odoo import http
 from odoo.http import request
@@ -13,7 +14,8 @@ class PayWayController(http.Controller):
     def payway_webhook(self):
 
         try:
-            data = request.get_json_data()            
+            data = request.get_json_data()
+            _logger.info("Notification received from PayWay with data:\n%s", pprint.pformat(data))        
             channel_name = 'pos.order.payment.payway.' + data['tran_id']
             
             # Send notification from backend
