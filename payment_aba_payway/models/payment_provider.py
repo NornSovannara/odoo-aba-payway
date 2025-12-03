@@ -56,6 +56,11 @@ class PaymentProvider(models.Model):
         self.ensure_one()
         return self.journal_id.bank_account_id._payway_api_get_transaction_detail(tran_id)
 
+    def _payway_calculate_webhook_secure_hash(self, notification_data):
+        self.ensure_one()
+
+        _, _, api_key = self._payway_get_api_cred()
+        return self.journal_id.bank_account_id._payway_calculate_webhook_secure_hash(api_key, notification_data)
 
     def _get_default_payment_method_codes(self):
         """ Override of `payment` to return the default payment method codes. """
