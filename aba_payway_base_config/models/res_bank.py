@@ -251,7 +251,7 @@ class ResBank(models.Model):
         """Close payway transaction.
 
         :return: transaction id.
-        :rtype: reponse dict
+        :rtype: response dict
         """
 
         api_url, merchant_id, api_key = self._payway_get_api_cred()
@@ -306,7 +306,7 @@ class ResBank(models.Model):
         """Get payway transaction detail.
 
         :return: transaction id.
-        :rtype: response dict
+        :rtype: reponse dict
         """
         api_url, merchant_id, api_key = self._payway_get_api_cred()
         payload = {
@@ -360,6 +360,22 @@ class ResBank(models.Model):
 
         data_to_sign = [str(payload.get(k, '')) for k in secure_hash_keys]
         signing_string = ''.join(data_to_sign)
+        hmac_hash = hmac.new(
+            api_key.encode(), signing_string.encode(), hashlib.sha512
+        ).digest()
+        base64_encoded = base64.b64encode(hmac_hash).decode()
+        return base64_encoded
+
+
+    def _payway_calculate_webhook_secure_hash(self, api_key: str, payload: dict):
+        """Compute the secure hash for verifying webhook notifications from Payway.
+
+        :return: The calculated hash.
+        :rtype: str
+        """
+
+        data_to_sign = sorted(payload.keys())
+        signing_string = ''.join([str(payload.get(k, '')) for k in data_to_sign])
         hmac_hash = hmac.new(
             api_key.encode(), signing_string.encode(), hashlib.sha512
         ).digest()

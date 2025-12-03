@@ -12,7 +12,6 @@ from odoo.addons.payment_aba_payway import const
 
 _logger = logging.getLogger(__name__)
 
-
 class PaymentTransaction(models.Model):
     _inherit = 'payment.transaction'
 
@@ -60,9 +59,13 @@ class PaymentTransaction(models.Model):
             const.WEB_HOOK_PATH['webhook'],
         )
 
+        # tran_id = self._compute_reference(self.provider_code, prefix=self.reference)
+        # print(tran_id)
+
         rendering_values = {
             'form_url': api_url + '/api/payment-gateway/v1/payments/purchase',
             # Use order reference as transaction id for payway, as this already has unique constraint.
+            # TODO: Use compute reference to generate unique transaction id.
             'tran_id': self.reference,
             'req_time': req_time,
             'lifetime': 3,
@@ -81,7 +84,7 @@ class PaymentTransaction(models.Model):
             'merchant_id': merchant_id,
             'currency': self.currency_id.name,
             'skip_success_page': 1,
-            'return_url': webhook_url,
+            'return_url': 'https://webhook.site/4c97f6f9-e9ac-421c-b76f-17fed21c3877',
             'continue_success_url': urljoin(base_odoo_url, '/payment/status'),
         }
 
