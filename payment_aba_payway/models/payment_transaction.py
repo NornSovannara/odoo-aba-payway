@@ -84,7 +84,7 @@ class PaymentTransaction(models.Model):
             'merchant_id': merchant_id,
             'currency': self.currency_id.name,
             'skip_success_page': 1,
-            'return_url': 'https://webhook.site/4c97f6f9-e9ac-421c-b76f-17fed21c3877',
+            'return_url': webhook_url,
             'continue_success_url': urljoin(base_odoo_url, '/payment/status'),
         }
 
@@ -148,97 +148,39 @@ class PaymentTransaction(models.Model):
         super()._process_notification_data(notification_data)
         if self.provider_code != 'aba_payway':
             return
-
-        if self.state == 'done':
-            _logger.info(
-                "The transaction with reference %s has already been processed as done; "
-                "skipping notification data processing.",
-                self.reference,
-            )
-            return
-
-        tran_id = notification_data.get('tran_id', '')
-        response = self.provider_id._payway_api_check_transaction(tran_id)
-
-        status_code = response['status']['code']
-        status_msg = response['status']['message']
-        if status_code != '00':
-            _logger.warning(
-                "PayWay transaction return with the following errors: %s: %s; "
-                "reference %s; transaction id %s.",
-                status_code,
-                status_msg,
-                self.reference,
-                tran_id,
-            )
-            self._set_error(
-                "PayWay: " + _("Error code: %s, message: %s", status_code, status_msg)
-            )
-            return
-
-        payment_code = int(response['data']['payment_status_code'])
+        
+        tran_id = notification_data.get('tran_id')
+        status_code = int(notification_data.get('status'))
+        
         # Update the provider reference.
-        self.provider_reference = response['data']['apv']
+        self.provider_reference = notification_data.get('apv')
 
         if self.payment_method_id.code == 'card':
-            payway_transaction_detail: dict = (
-                self.provider_id._payway_api_get_transaction_detail(tran_id)
-            )
-            payment_method_type = (
-                payway_transaction_detail.get('data', {})
-                .get('payment_type', '')
-                .lower()
-            )
+            try:
+                payway_transaction_detail: dict = self.provider_id._payway_api_get_transaction_detail(tran_id)
+                payment_method_type = payway_transaction_detail.get('data', {}).get('payment_type', '').lower()
 
-            payment_method = self.env['payment.method']._get_from_code(
-                payment_method_type, mapping=const.PAYWAY_PAYMENT_METHODS_MAPPING
-            )
-            self.payment_method_id = payment_method or self.payment_method_id
+                payment_method = self.env['payment.method']._get_from_code(
+                    payment_method_type, mapping=const.PAYWAY_PAYMENT_METHODS_MAPPING
+                )
+                self.payment_method_id = payment_method or self.payment_method_id
+                
+            except ValidationError as e:
+                _logger.warning(
+                    "Failed to fetch payment method details for transaction id %s; "
+                    "payway reference %(provider_reference)s; Error: %s", 
+                    tran_id, self.provider_reference, str(e)
+                )
 
-        if payment_code == 0:
+        if status_code == 0:
             self._set_done()
-        elif payment_code in list(const.STATUS_CODE_MAPPING.keys()):
-            payment_msg = (
-                response['data']['payment_status']
-                or const.STATUS_CODE_MAPPING[payment_code]
-            )
-
-            if payment_code == 2:
-                self._set_pending(
-                    _(
-                        "Your payment is being processed with (payment code %(payment_code)s; message = %(payment_msg)s; "
-                        "payway reference %(provider_reference)s; transaction id %(tran_id)s)",
-                        payment_code=payment_code,
-                        payment_msg=payment_msg,
-                        provider_reference=self.provider_reference,
-                        tran_id=tran_id,
-                    )
-                )
-            else:
-                self._set_error(
-                    _(
-                        "An error occurred during the processing of your payment (payment code %(payment_code)s; message = %(payment_msg)s; "
-                        "payway reference %(provider_reference)s; transaction id %(tran_id)s). Please try again.",
-                        payment_code=payment_code,
-                        payment_msg=payment_msg,
-                        provider_reference=self.provider_reference,
-                        tran_id=tran_id,
-                    )
-                )
         else:
             _logger.warning(
-                "Received data with invalid payment code: (%s) for transaction with "
-                "payway reference %s; transaction id %s",
-                payment_code,
-                self.reference,
-                tran_id,
+                "Received data with invalid payment status: (%s) for transaction with "
+                "payway reference %s; transaction id %s", status_code, self.provider_reference, tran_id
             )
-            self._set_error(
-                "ABA Payway: "
-                + _(
-                    "Unknown payment code: %(payment_code)s; payway reference %(provider_reference)s; transaction id %(tran_id)s",
-                    payment_code=payment_code,
-                    provider_reference=self.provider_reference,
-                    tran_id=tran_id,
-                )
-            )
+
+            self._set_pending(_(
+                "Received unknown status code: %(status_code)s; payway reference %(provider_reference)s; transaction id %(tran_id)s", 
+                status_code=status_code, provider_reference=self.provider_reference, tran_id=tran_id
+            ))
