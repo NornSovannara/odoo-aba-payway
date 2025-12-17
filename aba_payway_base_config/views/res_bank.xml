@@ -20,6 +20,12 @@
                             password="True"
                             invisible="payway_environment != 'production'"
                         />
+                        <field 
+                            name="production_rsa_public_key"
+                            string="RSA Public Key"
+                            password="True"
+                            invisible="payway_environment != 'production'"
+                        />
                         
                         <field 
                             name="sandbox_payway_merchant_id"
@@ -32,6 +38,14 @@
                             password="True"
                             invisible="payway_environment != 'sandbox'"
                         />
+
+                        <field 
+                            name="sandbox_rsa_public_key"
+                            string="RSA Public Key"
+                            password="True"
+                            invisible="payway_environment != 'sandbox'"
+                        />
+
                     </group>
                     
                     <group>

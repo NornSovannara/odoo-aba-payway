@@ -1,10 +1,15 @@
+import json
 import time
+import base64
 
 from odoo.exceptions import UserError
 from odoo.exceptions import ValidationError
 from odoo import _, models, fields, api
 
 from odoo.addons.payment_aba_payway import const
+
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import padding
 
 class PaymentProvider(models.Model):
     _inherit = 'payment.provider'
@@ -18,6 +23,13 @@ class PaymentProvider(models.Model):
         super()._compute_view_configuration_fields()
         self.filtered(lambda p: p.code == 'aba_payway').update({
             'require_currency': True,
+        })
+
+    def _compute_feature_support_fields(self):
+        """ Override of `payment` to enable additional features. """
+        super()._compute_feature_support_fields()
+        self.filtered(lambda p: p.code == 'aba_payway').update({
+            'support_refund': 'partial',
         })
 
     # ==== CONSTRAINT METHODS ===#
@@ -58,11 +70,28 @@ class PaymentProvider(models.Model):
         self.ensure_one()
         return self.journal_id.bank_account_id._payway_api_get_transaction_detail(tran_id)
 
+    def _payway_api_refund_transaction(self, merchant_auth: str):
+        self.ensure_one()
+        return self.journal_id.bank_account_id._payway_api_refund_transaction(merchant_auth)
+
     def _payway_calculate_webhook_secure_hash(self, notification_data):
         self.ensure_one()
 
-        _, _, api_key = self._payway_get_api_cred()
+        _, _, api_key, _ = self._payway_get_api_cred()
         return self.journal_id.bank_account_id._payway_calculate_webhook_secure_hash(api_key, notification_data)
+
+    def _payway_calculate_merchant_auth(self, public_key_pem: str, payload: dict):
+
+        self.ensure_one()
+        public_key = serialization.load_pem_public_key(public_key_pem.encode("utf-8"))
+        data = json.dumps(payload).encode("utf-8")
+
+        encrypted = bytearray()
+        for i in range(0, len(data), 117):
+            chunk = data[i : i + 117]
+            encrypted.extend(public_key.encrypt(chunk, padding.PKCS1v15()))
+
+        return base64.b64encode(bytes(encrypted)).decode("utf-8")
 
     def _compute_transaction_suffix(self):
         """Convert timestamp into base62, for suffix transaction reference.
