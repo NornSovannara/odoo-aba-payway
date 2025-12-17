@@ -1,3 +1,5 @@
+import time
+
 from odoo.exceptions import UserError
 from odoo.exceptions import ValidationError
 from odoo import _, models, fields, api
@@ -61,6 +63,28 @@ class PaymentProvider(models.Model):
 
         _, _, api_key = self._payway_get_api_cred()
         return self.journal_id.bank_account_id._payway_calculate_webhook_secure_hash(api_key, notification_data)
+
+    def _compute_transaction_suffix(self):
+        """Convert timestamp into base62, for suffix transaction reference.
+
+        :rtype: str
+        """        
+
+        def to_base62(n: int) -> str:
+            if n == 0:
+                return const.BASE62_ALPHABET[0]
+            
+            base62 = []
+            while n > 0:
+                n, r = divmod(n, 62)
+                base62.append(const.BASE62_ALPHABET[r])
+            
+            return ''.join(reversed(base62))
+        
+        timestamp = int(time.time())
+        encoded = to_base62(timestamp)
+        return encoded
+    
 
     def _get_default_payment_method_codes(self):
         """ Override of `payment` to return the default payment method codes. """

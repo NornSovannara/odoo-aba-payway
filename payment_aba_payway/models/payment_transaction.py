@@ -12,8 +12,36 @@ from odoo.addons.payment_aba_payway import const
 
 _logger = logging.getLogger(__name__)
 
+
 class PaymentTransaction(models.Model):
     _inherit = 'payment.transaction'
+
+    def _compute_reference(self, provider_code, prefix=None, separator='-', **kwargs):
+        """Override of `payment` to ensure that PayWay requirement for references is satisfied.
+
+        PayWay requires for references to be at most 20 characters long.
+        Make sure that on DB change, the PayWay transaction id will not be duplicate.
+        Preserve Odoo original reference in PayWay transaction id for easy reconciliation.
+
+        """
+
+        if provider_code != 'aba_payway':
+            return super()._compute_reference(provider_code, prefix=prefix, **kwargs)
+
+        if not prefix:
+            # Use custom prefix, by convert timestamp to base62
+            # preserve Odoo original reference in PayWay transaction id for easy reconciliation.
+            # Also ensure consitency with PayWay transaction id for POS module (Same prefix format).
+
+            reference_suffix = self.provider_id._compute_transaction_suffix()
+            reference = self.sudo()._compute_reference_prefix(
+                provider_code, separator, **kwargs
+            )
+            # reference = super()._compute_reference(provider_code, prefix=prefix, **kwargs)
+
+            prefix = f'{reference}{separator}{reference_suffix}'
+
+        return super()._compute_reference(provider_code, prefix=prefix, **kwargs)
 
     def _get_specific_processing_values(self, processing_values):
         """Override of payment to return ABA Payway specific rendering values.
@@ -59,13 +87,8 @@ class PaymentTransaction(models.Model):
             const.WEB_HOOK_PATH['webhook'],
         )
 
-        # tran_id = self._compute_reference(self.provider_code, prefix=self.reference)
-        # print(tran_id)
-
         rendering_values = {
             'form_url': api_url + '/api/payment-gateway/v1/payments/purchase',
-            # Use order reference as transaction id for payway, as this already has unique constraint.
-            # TODO: Use compute reference to generate unique transaction id.
             'tran_id': self.reference,
             'req_time': req_time,
             'lifetime': 3,
@@ -148,28 +171,36 @@ class PaymentTransaction(models.Model):
         super()._process_notification_data(notification_data)
         if self.provider_code != 'aba_payway':
             return
-        
+
         tran_id = notification_data.get('tran_id')
         status_code = int(notification_data.get('status'))
-        
+
         # Update the provider reference.
         self.provider_reference = notification_data.get('apv')
 
         if self.payment_method_id.code == 'card':
             try:
-                payway_transaction_detail: dict = self.provider_id._payway_api_get_transaction_detail(tran_id)
-                payment_method_type = payway_transaction_detail.get('data', {}).get('payment_type', '').lower()
+                payway_transaction_detail: dict = (
+                    self.provider_id._payway_api_get_transaction_detail(tran_id)
+                )
+                payment_method_type = (
+                    payway_transaction_detail.get('data', {})
+                    .get('payment_type', '')
+                    .lower()
+                )
 
                 payment_method = self.env['payment.method']._get_from_code(
                     payment_method_type, mapping=const.PAYWAY_PAYMENT_METHODS_MAPPING
                 )
                 self.payment_method_id = payment_method or self.payment_method_id
-                
+
             except ValidationError as e:
                 _logger.warning(
                     "Failed to fetch payment method details for transaction id %s; "
-                    "payway reference %(provider_reference)s; Error: %s", 
-                    tran_id, self.provider_reference, str(e)
+                    "payway reference %(provider_reference)s; Error: %s",
+                    tran_id,
+                    self.provider_reference,
+                    str(e),
                 )
 
         if status_code == 0:
@@ -177,10 +208,17 @@ class PaymentTransaction(models.Model):
         else:
             _logger.warning(
                 "Received data with invalid payment status: (%s) for transaction with "
-                "payway reference %s; transaction id %s", status_code, self.provider_reference, tran_id
+                "payway reference %s; transaction id %s",
+                status_code,
+                self.provider_reference,
+                tran_id,
             )
 
-            self._set_pending(_(
-                "Received unknown status code: %(status_code)s; payway reference %(provider_reference)s; transaction id %(tran_id)s", 
-                status_code=status_code, provider_reference=self.provider_reference, tran_id=tran_id
-            ))
+            self._set_pending(
+                _(
+                    "Received unknown status code: %(status_code)s; payway reference %(provider_reference)s; transaction id %(tran_id)s",
+                    status_code=status_code,
+                    provider_reference=self.provider_reference,
+                    tran_id=tran_id,
+                )
+            )

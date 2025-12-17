@@ -2,7 +2,7 @@ import { PosStore } from "@point_of_sale/app/store/pos_store";
 import { patch } from "@web/core/utils/patch";
 import { user } from "@web/core/user";
 
-import { PAYWAY_QR_CODE_METHOD, MODEL, POS_ORDER_QR_TYPE } from "./const";
+import { PAYWAY_QR_CODE_METHOD, MODEL, POS_ORDER_QR_TYPE, BASE62 } from "./const";
 
 patch(PosStore.prototype, {
 
@@ -37,21 +37,27 @@ patch(PosStore.prototype, {
         return res;
     },
 
+    _toBase62(num) {
+        if (num === 0) return BASE62[0];
+
+        let result = "";
+        while (num > 0) {
+            const rem = num % 62;
+            result = BASE62[rem] + result;
+            num = Math.floor(num / 62);
+        }
+        return result;
+    },
+
     _paywayCreateTxnId(payment) {
-        // TODO: Use compute reference to generate unique transaction id.
 
-        const today = new Date();
-        const day = String(today.getDate()).padStart(2, '0');
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const year = String(today.getFullYear()).slice(-2);
+        // Get timstamp in days for suffix, so that transaction id will not be too long
+        const timestamp = Math.floor(Date.now() / 1000 / 60 / 60 / 24);
+        const suffix = this._toBase62(timestamp);
 
-        const formattedDate = year + month + day;
-        const orderReference = payment.pos_order_id.pos_reference
-            .split(" ")
-            .at(-1)
-            .replaceAll("-", "");
+        const orderReference = payment.pos_order_id.pos_reference;
 
-        const transaction_id = `${formattedDate}${orderReference}`;
+        const transaction_id = `${orderReference}-${suffix}`;
         return transaction_id;
     }
 });

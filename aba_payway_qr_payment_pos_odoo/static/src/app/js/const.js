@@ -10,3 +10,5 @@ export const POS_ORDER_QR_TYPE = {
     'screen': 'screen',
     'bill': 'bill',
 }
+
+export const BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
