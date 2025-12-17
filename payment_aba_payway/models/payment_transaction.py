@@ -1,4 +1,5 @@
 from datetime import datetime
+import pprint
 from urllib.parse import urljoin
 import logging
 
@@ -11,7 +12,6 @@ from odoo.exceptions import ValidationError
 from odoo.addons.payment_aba_payway import const
 
 _logger = logging.getLogger(__name__)
-
 
 class PaymentTransaction(models.Model):
     _inherit = 'payment.transaction'
@@ -57,7 +57,7 @@ class PaymentTransaction(models.Model):
         if self.provider_code != 'aba_payway':
             return res
 
-        api_url, merchant_id, api_key = self.provider_id._payway_get_api_cred()
+        api_url, merchant_id, api_key, _ = self.provider_id._payway_get_api_cred()
 
         req_time = datetime.now().strftime('%Y%m%d%H%M%S')
         partner_first_name, partner_last_name = payment_utils.split_partner_name(
@@ -120,6 +120,46 @@ class PaymentTransaction(models.Model):
         )
 
         return rendering_values
+    
+    def _send_refund_request(self, amount_to_refund=None):
+        """ Override of payment to send a refund request to Stripe.
+
+        Note: self.ensure_one()
+
+        :param float amount_to_refund: The amount to refund.
+        :return: The refund transaction created to process the refund request.
+        :rtype: recordset of `payment.transaction`
+        """
+        refund_tx = super()._send_refund_request(amount_to_refund=amount_to_refund)
+        if self.provider_code != 'aba_payway':
+            return refund_tx
+        
+        _, merchant_id, _, public_key_pem = self.provider_id._payway_get_api_cred()
+
+        payload_merchant_auth = {
+            "mc_id": merchant_id,
+            "tran_id": self.reference,
+            "refund_amount": -refund_tx.amount,
+        }
+        merchant_auth = self.provider_id._payway_calculate_merchant_auth(public_key_pem, payload_merchant_auth)
+
+        data: dict = self.provider_id._payway_api_refund_transaction(merchant_auth)
+        _logger.info(
+            "Payway refund request response for transaction wih reference %s:\n%s",
+            self.reference, pprint.pformat(data)
+        )
+
+        # Prepare data for _process_notification_data to handle
+        data.update({
+            'tran_id': self.reference,
+            'status': 0,
+            'apv': self.provider_reference,
+        })
+
+        refund_tx._handle_notification_data('aba_payway', data)
+
+        return refund_tx
+      
 
     def _get_tx_from_notification_data(self, provider_code, notification_data):
         """Override of `payment` to find the transaction based on the notification data.
@@ -174,37 +214,35 @@ class PaymentTransaction(models.Model):
 
         tran_id = notification_data.get('tran_id')
         status_code = int(notification_data.get('status'))
-
         # Update the provider reference.
         self.provider_reference = notification_data.get('apv')
+        
+        if self.state not in ('done', 'authorized') and self.operation != 'refund':
+            if self.payment_method_id.code == 'card':
+                try:
+                    payway_transaction_detail: dict = self.provider_id._payway_api_get_transaction_detail(tran_id)
+                    payment_method_type = payway_transaction_detail.get('data', {}).get('payment_type', '').lower()
 
-        if self.payment_method_id.code == 'card':
-            try:
-                payway_transaction_detail: dict = (
-                    self.provider_id._payway_api_get_transaction_detail(tran_id)
-                )
-                payment_method_type = (
-                    payway_transaction_detail.get('data', {})
-                    .get('payment_type', '')
-                    .lower()
-                )
-
-                payment_method = self.env['payment.method']._get_from_code(
-                    payment_method_type, mapping=const.PAYWAY_PAYMENT_METHODS_MAPPING
-                )
-                self.payment_method_id = payment_method or self.payment_method_id
-
-            except ValidationError as e:
-                _logger.warning(
-                    "Failed to fetch payment method details for transaction id %s; "
-                    "payway reference %(provider_reference)s; Error: %s",
-                    tran_id,
-                    self.provider_reference,
-                    str(e),
-                )
+                    payment_method = self.env['payment.method']._get_from_code(
+                        payment_method_type, mapping=const.PAYWAY_PAYMENT_METHODS_MAPPING
+                    )
+                    self.payment_method_id = payment_method or self.payment_method_id
+                    
+                except ValidationError as e:
+                    _logger.warning(
+                        "Failed to fetch payment method details for transaction id %s; "
+                        "payway reference %(provider_reference)s; Error: %s", 
+                        tran_id, self.provider_reference, str(e)
+                    )
 
         if status_code == 0:
             self._set_done()
+            
+            # Immediately post-process the transaction if it is a refund, as the post-processing
+            # will not be triggered by a customer browsing the transaction from the portal.
+            if self.operation == 'refund':
+                self.env.ref('payment.cron_post_process_payment_tx')._trigger()
+
         else:
             _logger.warning(
                 "Received data with invalid payment status: (%s) for transaction with "

@@ -47,3 +47,5 @@ POS_ORDER_QR_TYPE = {
 WEB_HOOK_PATH = {
     'pos': '/pos/payway/webhook',
 }
+
+REFUND_TXN_SECURE_HASH_KEYS = ['request_time', 'merchant_id', 'merchant_auth']
