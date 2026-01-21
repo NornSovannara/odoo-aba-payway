@@ -1,10 +1,14 @@
+# TODO: Consts should be sets ideally
+
 PAYMENT_METHODS_MAPPING = {
     'card': 'cards',
+    # TODO: Redundant?
     'abapay_khqr': 'abapay_khqr',
     'wechat_pay': 'wechat',
     'alipay': 'alipay',
 }
 
+# TODO: Keep only relevant ones. Use .get() when fetching from set.
 PAYWAY_PAYMENT_METHODS_MAPPING = {
     'visa': 'visa',
     'mastercard': 'mc',
