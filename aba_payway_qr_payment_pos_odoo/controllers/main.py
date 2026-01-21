@@ -18,8 +18,10 @@ class PayWayController(http.Controller):
             _logger.info("Notification received from PayWay with data:\n%s", pprint.pformat(data))        
             channel_name = 'pos.order.payment.payway.' + data['tran_id']
             
-            # TODO: verify webhook signature
-            # How to retreive API key stored in res.partner.bank to verify webhook signature?
+            # TODO: Verify webhook signature
+            # request.env['res.partner.bank'].sudo().with_context(active_test=False).search([
+            #     'xyz'='abc'
+            # ]).payway_key
 
             # Send notification from backend
             request.env['bus.bus'].sudo()._sendone(
