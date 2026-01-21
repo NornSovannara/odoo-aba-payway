@@ -13,7 +13,7 @@ from odoo.exceptions import ValidationError
 
 MAX_RETRY = 2
 
-
+# TODO: Consider using Retry from urllib3 for a more standard implementation
 def _make_payway_api_request(base_url: str, endpoint: str, payload: dict):
 
     url = urljoin(base_url, endpoint)
@@ -51,6 +51,9 @@ def _make_payway_api_request(base_url: str, endpoint: str, payload: dict):
 class ResBank(models.Model):
     _inherit = "res.partner.bank"
 
+    # TODO: Can use the same fields for both prod and sandbox.
+    # TODO: Ideally store credentials under payment.provider
+    # TODO Modify _payway_get_api_cred() to differentiate between prod and sandbox
     production_payway_merchant_id = fields.Char(
         string='Merchant ID',
         help="Enter your production PayWay Merchant ID. You'll receive this by email after obtaining a Go Live approval from ABA PayWay.",
@@ -61,6 +64,9 @@ class ResBank(models.Model):
         groups='base.group_system',
     )
 
+    # TODO: Can use the same fields for both prod and sandbox.
+    # TODO: Ideally store credentials under payment.provider
+    # TODO Modify _payway_get_api_cred() to differentiate between prod and sandbox
     sandbox_payway_merchant_id = fields.Char(
         string='Merchant ID',
         help='Enter your unique PayWay Merchant ID. You can find it in the email registered for your PayWay Sandbox account.',
@@ -187,6 +193,8 @@ class ResBank(models.Model):
                     'utf-8'
                 ),
             }
+
+            # TODO: QR_PAYMENT_SECURE_HASH_KEYS doesn't exist?
             payload.update(
                 {'hash': self._payway_calculate_payment_secure_hash(api_key, payload, const.QR_PAYMENT_SECURE_HASH_KEYS)}
             )
@@ -366,6 +374,7 @@ class ResBank(models.Model):
 
         raise ValidationError(response['status']['message'])
 
+    # TODO: Fix docstring
     def _payway_get_api_cred(self):
         """Return the URL of the API corresponding to the selected payway environment.
 
