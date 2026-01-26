@@ -19,7 +19,7 @@ DEFAULT_PAYMENT_METHODS_CODES = [
     'abapay_khqr',
     'wechat_pay',
     'alipay',
-    
+
     # Brand payment methods.
     'visa',
     'mastercard',
@@ -60,12 +60,12 @@ WEB_HOOK_PATH = {
     'poll': '/payment/payway/status/poll',
 }
 
-STATUS_CODE_MAPPING = {
-    0: "APPROVED",
-    2: "PENDING",
-    3: "DECLINDED",
-    7: "CANCELLED",
+STATUS_MAPPING = {
+    'APPROVED': 'APPROVED',
+    'PRE-AUTH': 'PRE-AUTH',
+    'REFUNDED': 'REFUNDED',
+    'PENDING': 'PENDING',
+    'CANCELLED': 'CANCELLED',
 }
-# 4: "REFUNDED",
 
 BASE62_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
