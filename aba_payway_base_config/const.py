@@ -3,7 +3,7 @@ API_URLS = {
     'sandbox': 'https://checkout-sandbox.payway.com.kh',
 }
 
-PAYMENT_SECURE_HASH_KEYS = [
+QR_PAYMENT_SECURE_HASH_KEYS = [
     'req_time',
     'merchant_id',
     'tran_id',
@@ -49,3 +49,7 @@ WEB_HOOK_PATH = {
 }
 
 REFUND_TXN_SECURE_HASH_KEYS = ['request_time', 'merchant_id', 'merchant_auth']
+
+VOID_TXN_SECURE_HASH_KEYS = ['merchant_id', 'merchant_auth', 'request_time']
+
+CAPTURE_TXN_SECURE_HASH_KEYS = ["merchant_auth", "request_time", "merchant_id"]

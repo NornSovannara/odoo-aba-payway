@@ -28,6 +28,14 @@ class PayWayController(http.Controller):
             received_signature = request.httprequest.headers.get('x-payway-hmac-sha512')
             self._verify_notification_signature(data, received_signature, tx_sudo)
 
+            data.update(
+                {
+                    "payment_status": const.STATUS_MAPPING["PRE-AUTH"]
+                    if tx_sudo.provider_id.capture_manually
+                    else const.STATUS_MAPPING["APPROVED"],
+                }
+            )
+
             tx_sudo._handle_notification_data('aba_payway', data)
 
         except ValidationError:

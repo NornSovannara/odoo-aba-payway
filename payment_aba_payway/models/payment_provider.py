@@ -30,6 +30,7 @@ class PaymentProvider(models.Model):
         super()._compute_feature_support_fields()
         self.filtered(lambda p: p.code == 'aba_payway').update({
             'support_refund': 'partial',
+            'support_manual_capture': 'full_only',
         })
 
     # ==== CONSTRAINT METHODS ===#
@@ -73,6 +74,14 @@ class PaymentProvider(models.Model):
     def _payway_api_refund_transaction(self, merchant_auth: str):
         self.ensure_one()
         return self.journal_id.bank_account_id._payway_api_refund_transaction(merchant_auth)
+
+    def _payway_api_void_transaction(self, merchant_auth: str):
+        self.ensure_one()
+        return self.journal_id.bank_account_id._payway_api_void_transaction(merchant_auth)
+    
+    def _payway_api_capture_transaction(self, merchant_auth: str):
+        self.ensure_one()
+        return self.journal_id.bank_account_id._payway_api_capture_transaction(merchant_auth)
 
     def _payway_calculate_webhook_secure_hash(self, notification_data):
         self.ensure_one()

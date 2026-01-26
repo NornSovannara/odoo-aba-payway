@@ -366,6 +366,51 @@ class ResBank(models.Model):
 
         raise ValidationError(response['status']['message'])
 
+    def _payway_api_void_transaction(self, merchant_auth: str):
+        api_url, merchant_id, api_key, _ = self._payway_get_api_cred()
+        req_time = datetime.now().strftime('%Y%m%d%H%M%S')
+
+        payload = {
+            "merchant_id": merchant_id,
+            "merchant_auth": merchant_auth,
+            "request_time": req_time,
+        }
+
+        payload.update(
+            {'hash': self._payway_calculate_payment_secure_hash(api_key, payload, const.VOID_TXN_SECURE_HASH_KEYS)}
+        )
+
+        response = _make_payway_api_request(
+            api_url, '/api/merchant-portal/merchant-access/online-transaction/pre-auth-cancellation', payload
+        )
+
+        if str(response['status']['code']) == '00':
+            return response
+
+        raise ValidationError(response['status']['message'])
+
+    def _payway_api_capture_transaction(self, merchant_auth: str):
+        api_url, merchant_id, api_key, _ = self._payway_get_api_cred()
+        req_time = datetime.now().strftime('%Y%m%d%H%M%S')
+
+        payload = {
+            "merchant_auth": merchant_auth,
+            "request_time": req_time,
+            "merchant_id": merchant_id,
+        }
+        payload.update(
+            {'hash': self._payway_calculate_payment_secure_hash(api_key, payload, const.CAPTURE_TXN_SECURE_HASH_KEYS)}
+        )
+
+        response = _make_payway_api_request(
+            api_url, '/api/merchant-portal/merchant-access/online-transaction/pre-auth-completion', payload
+        )
+
+        if str(response['status']['code']) == '00':
+            return response
+
+        raise ValidationError(response['status']['message'])
+
     def _payway_get_api_cred(self):
         """Return the URL of the API corresponding to the selected payway environment.
 
