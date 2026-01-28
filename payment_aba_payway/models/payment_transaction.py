@@ -29,6 +29,7 @@ class PaymentTransaction(models.Model):
             return super()._compute_reference(provider_code, prefix=prefix, **kwargs)
 
         if not prefix:
+            # TODO: Why do we need to encode timestamp to base62? Timestamps will already be unique?
             # Use custom prefix, by convert timestamp to base62
             # preserve Odoo original reference in PayWay transaction id for easy reconciliation.
             # Also ensure consitency with PayWay transaction id for POS module (Same prefix format).

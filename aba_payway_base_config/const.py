@@ -1,3 +1,4 @@
+# TODO: Consts should be sets ideally
 API_URLS = {
     'production': 'https://checkout.payway.com.kh',
     'sandbox': 'https://checkout-sandbox.payway.com.kh',
@@ -33,12 +34,14 @@ PAYMENT_METHODS_CODES = [
     'alipay',
 ]
 
+# TODO: Redundant?
 PAYMENT_METHODS_MAPPING = {
     'abapay_khqr': 'abapay_khqr',
     'wechat': 'wechat',
     'alipay': 'alipay',
 }
 
+# TODO: Redundant?
 POS_ORDER_QR_TYPE = {
     'screen': 'screen',
     'bill': 'bill',
