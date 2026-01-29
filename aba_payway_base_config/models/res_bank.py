@@ -69,10 +69,14 @@ class ResBank(models.Model):
     # TODO Modify _payway_get_api_cred() to differentiate between prod and sandbox
     sandbox_payway_merchant_id = fields.Char(
         string='Merchant ID',
+        related='production_payway_merchant_id',
+        readonly=False,
         help='Enter your unique PayWay Merchant ID. You can find it in the email registered for your PayWay Sandbox account.',
     )
     sandbox_payway_key = fields.Char(
         string='API Key',
+        related='production_payway_key',
+        readonly=False,
         help='Enter your unique PayWay API Key. You can find it in the email registered for your PayWay Sandbox account.',
         groups='base.group_system',
     )
@@ -105,6 +109,8 @@ class ResBank(models.Model):
 
     sandbox_rsa_public_key = fields.Text(
         string='RSA Public Key',
+        related='production_rsa_public_key',
+        readonly=False,
         help='Enter your unique PayWay RSA Public Key. You can find it in the email registered for your PayWay Sandbox account.',
         groups='base.group_system',
     )
