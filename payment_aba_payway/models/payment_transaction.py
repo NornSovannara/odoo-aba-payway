@@ -30,6 +30,8 @@ class PaymentTransaction(models.Model):
 
         if not prefix:
             # TODO: Why do we need to encode timestamp to base62? Timestamps will already be unique?
+            # ANSWER: PayWay requires transaction reference to be at most 20 characters long, so base62 shorten the length. 
+
             # Use custom prefix, by convert timestamp to base62
             # preserve Odoo original reference in PayWay transaction id for easy reconciliation.
             # Also ensure consitency with PayWay transaction id for POS module (Same prefix format).
