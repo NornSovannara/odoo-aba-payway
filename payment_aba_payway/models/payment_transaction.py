@@ -16,35 +16,35 @@ _logger = logging.getLogger(__name__)
 class PaymentTransaction(models.Model):
     _inherit = 'payment.transaction'
 
-    def _compute_reference(self, provider_code, prefix=None, separator='-', **kwargs):
-        """Override of `payment` to ensure that PayWay requirement for references is satisfied.
+    # def _compute_reference(self, provider_code, prefix=None, separator='-', **kwargs):
+    #     """Override of `payment` to ensure that PayWay requirement for references is satisfied.
 
-        PayWay requires for references to be at most 20 characters long.
-        Make sure that on DB change, the PayWay transaction id will not be duplicate.
-        Preserve Odoo original reference in PayWay transaction id for easy reconciliation.
+    #     PayWay requires for references to be at most 20 characters long.
+    #     Make sure that on DB change, the PayWay transaction id will not be duplicate.
+    #     Preserve Odoo original reference in PayWay transaction id for easy reconciliation.
 
-        """
+    #     """
 
-        if provider_code != 'aba_payway':
-            return super()._compute_reference(provider_code, prefix=prefix, **kwargs)
+    #     if provider_code != 'aba_payway':
+    #         return super()._compute_reference(provider_code, prefix=prefix, **kwargs)
 
-        if not prefix:
-            # TODO: Why do we need to encode timestamp to base62? Timestamps will already be unique?
-            # ANSWER: PayWay requires transaction reference to be at most 20 characters long, so base62 shorten the length. 
+    #     if not prefix:
+    #         # TODO: Why do we need to encode timestamp to base62? Timestamps will already be unique?
+    #         # ANSWER: PayWay requires transaction reference to be at most 20 characters long, so base62 shorten the length. 
 
-            # Use custom prefix, by convert timestamp to base62
-            # preserve Odoo original reference in PayWay transaction id for easy reconciliation.
-            # Also ensure consitency with PayWay transaction id for POS module (Same prefix format).
+    #         # Use custom prefix, by convert timestamp to base62
+    #         # preserve Odoo original reference in PayWay transaction id for easy reconciliation.
+    #         # Also ensure consitency with PayWay transaction id for POS module (Same prefix format).
 
-            reference_suffix = self.provider_id._compute_transaction_suffix()
-            reference = self.sudo()._compute_reference_prefix(
-                provider_code, separator, **kwargs
-            )
-            # reference = super()._compute_reference(provider_code, prefix=prefix, **kwargs)
+    #         reference_suffix = self.provider_id._compute_transaction_suffix()
+    #         reference = self.sudo()._compute_reference_prefix(
+    #             provider_code, separator, **kwargs
+    #         )
+    #         # reference = super()._compute_reference(provider_code, prefix=prefix, **kwargs)
 
-            prefix = f'{reference}{separator}{reference_suffix}'
+    #         prefix = f'{reference}{separator}{reference_suffix}'
 
-        return super()._compute_reference(provider_code, prefix=prefix, **kwargs)
+    #     return super()._compute_reference(provider_code, prefix=prefix, **kwargs)
 
     def _get_specific_processing_values(self, processing_values):
         """Override of payment to return ABA Payway specific rendering values.
