@@ -16,35 +16,35 @@ _logger = logging.getLogger(__name__)
 class PaymentTransaction(models.Model):
     _inherit = 'payment.transaction'
 
-    # def _compute_reference(self, provider_code, prefix=None, separator='-', **kwargs):
-    #     """Override of `payment` to ensure that PayWay requirement for references is satisfied.
+    def _compute_reference(self, provider_code, prefix=None, separator='-', **kwargs):
+        """Override of `payment` to ensure that PayWay requirement for references is satisfied.
 
-    #     PayWay requires for references to be at most 20 characters long.
-    #     Make sure that on DB change, the PayWay transaction id will not be duplicate.
-    #     Preserve Odoo original reference in PayWay transaction id for easy reconciliation.
+        PayWay requires for references to be at most 20 characters long.
+        Make sure that on DB change, the PayWay transaction id will not be duplicate.
+        Preserve Odoo original reference in PayWay transaction id for easy reconciliation.
 
-    #     """
+        """
 
-    #     if provider_code != 'aba_payway':
-    #         return super()._compute_reference(provider_code, prefix=prefix, **kwargs)
+        if provider_code != 'aba_payway':
+            return super()._compute_reference(provider_code, prefix=prefix, **kwargs)
 
-    #     if not prefix:
-    #         # TODO: Why do we need to encode timestamp to base62? Timestamps will already be unique?
-    #         # ANSWER: PayWay requires transaction reference to be at most 20 characters long, so base62 shorten the length. 
+        if not prefix:
+            # TODO: Why do we need to encode timestamp to base62? Timestamps will already be unique?
+            # ANSWER: PayWay requires transaction reference to be at most 20 characters long, so base62 shorten the length. 
 
-    #         # Use custom prefix, by convert timestamp to base62
-    #         # preserve Odoo original reference in PayWay transaction id for easy reconciliation.
-    #         # Also ensure consitency with PayWay transaction id for POS module (Same prefix format).
+            # Use custom prefix, by convert timestamp to base62
+            # preserve Odoo original reference in PayWay transaction id for easy reconciliation.
+            # Also ensure consitency with PayWay transaction id for POS module (Same prefix format).
 
-    #         reference_suffix = self.provider_id._compute_transaction_suffix()
-    #         reference = self.sudo()._compute_reference_prefix(
-    #             provider_code, separator, **kwargs
-    #         )
-    #         # reference = super()._compute_reference(provider_code, prefix=prefix, **kwargs)
+            reference_suffix = self.provider_id._compute_transaction_suffix()
+            reference = self.sudo()._compute_reference_prefix(
+                provider_code, separator, **kwargs
+            )
+            # reference = super()._compute_reference(provider_code, prefix=prefix, **kwargs)
 
-    #         prefix = f'{reference}{separator}{reference_suffix}'
+            prefix = f'{reference}{separator}{reference_suffix}'
 
-    #     return super()._compute_reference(provider_code, prefix=prefix, **kwargs)
+        return super()._compute_reference(provider_code, prefix=prefix, **kwargs)
 
     def _get_specific_processing_values(self, processing_values):
         """Override of payment to return ABA Payway specific rendering values.
@@ -141,21 +141,21 @@ class PaymentTransaction(models.Model):
 
         payload_merchant_auth = {
             "mc_id": merchant_id,
-            "tran_id": self.reference,
+            "tran_id": self.provider_reference,
             "refund_amount": -refund_tx.amount,
         }
         merchant_auth = self.provider_id._payway_calculate_merchant_auth(public_key_pem, payload_merchant_auth)
 
         data: dict = self.provider_id._payway_api_refund_transaction(merchant_auth)
         _logger.info(
-            "Payway refund request response for transaction wih reference %s:\n%s",
-            self.reference, pprint.pformat(data)
+            "Payway refund request response for transaction with reference %s; payway_reference %s:\n%s",
+            self.reference, self.provider_reference, pprint.pformat(data)
         )
 
         # Prepare data for _process_notification_data to handle
         data.update({
             'payment_status': const.STATUS_MAPPING['REFUNDED'],
-            'apv': self.provider_reference,
+            'tran_id': self.provider_reference,
         })
 
         refund_tx._handle_notification_data('aba_payway', data)
@@ -163,7 +163,7 @@ class PaymentTransaction(models.Model):
         return refund_tx
 
     def _send_capture_request(self, amount_to_capture=None):
-        """ Override of `payment` to send a capture request to Adyen. """
+        """ Override of `payment` to send a capture re_send_capture_requestquest to Adyen. """
         capture_child_tx = super()._send_capture_request(amount_to_capture=amount_to_capture)
         if self.provider_code != 'aba_payway':
             return capture_child_tx 
@@ -171,21 +171,21 @@ class PaymentTransaction(models.Model):
         _, merchant_id, _, public_key_pem = self.provider_id._payway_get_api_cred()        
         payload_merchant_auth = {
             "mc_id": merchant_id,
-            "tran_id": self.reference,
+            "tran_id": self.provider_reference,
             "complete_amount": amount_to_capture or self.amount,
         }
         merchant_auth = self.provider_id._payway_calculate_merchant_auth(public_key_pem, payload_merchant_auth)
         
         data: dict = self.provider_id._payway_api_capture_transaction(merchant_auth)
         _logger.info(
-            "Payway capture request response for transaction wih reference %s:\n%s",
-            self.reference, pprint.pformat(data)
+            "Payway capture request response for transaction with reference %s; payway_reference %s:\n%s",
+            self.reference, self.provider_reference, pprint.pformat(data)
         )
 
         # Prepare data for _process_notification_data to handle
         data.update({
             'payment_status': const.STATUS_MAPPING['APPROVED'],
-            'apv': self.provider_reference,
+            'tran_id': self.provider_reference,
         })
         self._handle_notification_data('aba_payway', data)
 
@@ -214,31 +214,31 @@ class PaymentTransaction(models.Model):
             _, merchant_id, _, public_key_pem = self.provider_id._payway_get_api_cred()
             payload_merchant_auth = {
                 "mc_id": merchant_id,
-                "tran_id": self.reference,
+                "tran_id": self.provider_reference,
             }
 
             merchant_auth = self.provider_id._payway_calculate_merchant_auth(public_key_pem, payload_merchant_auth)
             data: dict = self.provider_id._payway_api_void_transaction(merchant_auth)
             _logger.info(
-                "Payway cancel request response for transaction wih reference %s:\n%s",
-                self.reference, pprint.pformat(data)
+                "Payway cancel request response for transaction with reference %s; payway_reference %s:\n%s",
+                self.reference, self.provider_reference, pprint.pformat(data)
             )
 
             # Prepare data for _process_notification_data to handle
             data.update({
                 'payment_status': const.STATUS_MAPPING['CANCELLED'],
-                'apv': self.provider_reference,
+                'tran_id': self.provider_reference,
             })
         
         else:
             data = {
                 'payment_status': const.STATUS_MAPPING['CANCELLED'],
-                'apv': self.provider_reference,
+                'tran_id': self.provider_reference,
             }
 
             _logger.info(
-                "Payway transaction wih reference %s already in 'Done' state, skipping void API call.",
-                self.reference
+                "Payway transaction with reference %s; payway_reference %s already in 'Done' state, skipping void API call.",
+                self.reference, self.provider_reference
             )
 
         self._handle_notification_data('aba_payway', data)
@@ -307,8 +307,9 @@ class PaymentTransaction(models.Model):
         payment_status = notification_data.get('payment_status')
         
         # Update the provider reference.
-        self.provider_reference = notification_data.get('apv')
-        
+        tran_id = notification_data.get('tran_id')
+        self.provider_reference = tran_id
+
         if (
             (
                 payment_status == const.STATUS_MAPPING["APPROVED"]
@@ -316,10 +317,10 @@ class PaymentTransaction(models.Model):
             )
             and self.state not in ('done', 'authorized')
         ):
-            # If tran_id exist, this mean the data come from webhook after complete the payment
-            tran_id = notification_data.get('tran_id', '')
+            # If apv exist, this mean the data come from webhook after complete the payment
+            apv_code = notification_data.get('apv', '')
 
-            if self.payment_method_id.code == 'card' and tran_id:
+            if self.payment_method_id.code == 'card' and apv_code:
                 try:
                     payway_transaction_detail: dict = self.provider_id._payway_api_get_transaction_detail(tran_id)
                     payment_method_type = payway_transaction_detail.get('data', {}).get('payment_type', '').lower()
@@ -331,9 +332,9 @@ class PaymentTransaction(models.Model):
                     
                 except ValidationError as e:
                     _logger.warning(
-                        "Failed to fetch payment method details for transaction id %s; "
-                        "payway reference %(provider_reference)s; Error: %s", 
-                        tran_id, self.provider_reference, str(e)
+                        "Failed to fetch payment method details for reference %s; "
+                        "payway reference %s; Error: %s", 
+                        self.reference, tran_id, str(e)
                     )
 
         if  (
@@ -357,10 +358,10 @@ class PaymentTransaction(models.Model):
         else:
             _logger.warning(
                 "Received data with invalid payment status: (%s) for transaction with "
-                "payway reference %s; transaction id %s", payment_status, self.provider_reference, tran_id
+                "reference %s and payway reference %s", payment_status, self.reference, self.provider_reference
             )
 
             self._set_pending(_(
-                "Received unknown payment status: %(payment_status)s; payway reference %(provider_reference)s; transaction id %(tran_id)s", 
-                payment_status=payment_status, provider_reference=self.provider_reference, tran_id=tran_id
+                "Received unknown payment status: %(payment_status)s; reference %(reference)s; payway reference %(provider_reference)s", 
+                payment_status=payment_status, reference=self.reference, provider_reference=self.provider_reference
             ))
