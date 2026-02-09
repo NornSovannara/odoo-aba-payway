@@ -18,6 +18,8 @@
         
         'data/payment_method_data.xml',
         'data/payment_provider_data.xml',
+
+        'wizards/payment_capture_wizard_views.xml',
     ],
     'assets': {
         'web.assets_frontend': [

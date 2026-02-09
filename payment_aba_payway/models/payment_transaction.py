@@ -207,8 +207,8 @@ class PaymentTransaction(models.Model):
         # if a capture has already occurred and directly void the remaining balance.
         # 
         # Logic:
-        # - 'authorized': No capture has occurred yet; proceed with cancellation.
-        # - 'done': Partial captured; skip API, update Odoo locally.
+        # - state 'authorized': No capture has occurred yet; proceed with cancellation.
+        # - state 'done': Partial captured; skip API, update Odoo locally.
         if self.state != "done":
 
             _, merchant_id, _, public_key_pem = self.provider_id._payway_get_api_cred()
