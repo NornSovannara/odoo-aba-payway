@@ -30,7 +30,7 @@ class PaymentProvider(models.Model):
         super()._compute_feature_support_fields()
         self.filtered(lambda p: p.code == 'aba_payway').update({
             'support_refund': 'partial',
-            'support_manual_capture': 'full_only',
+            'support_manual_capture': 'partial',
         })
 
     # ==== CONSTRAINT METHODS ===#

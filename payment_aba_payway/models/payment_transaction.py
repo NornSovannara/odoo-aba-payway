@@ -172,7 +172,7 @@ class PaymentTransaction(models.Model):
         payload_merchant_auth = {
             "mc_id": merchant_id,
             "tran_id": self.reference,
-            "complete_amount": self.amount,
+            "complete_amount": amount_to_capture or self.amount,
         }
         merchant_auth = self.provider_id._payway_calculate_merchant_auth(public_key_pem, payload_merchant_auth)
         
@@ -189,6 +189,9 @@ class PaymentTransaction(models.Model):
         })
         self._handle_notification_data('aba_payway', data)
 
+        if capture_child_tx:
+            capture_child_tx._handle_notification_data('aba_payway', data)
+
         return capture_child_tx 
 
     def _send_void_request(self, amount_to_void=None):
@@ -198,26 +201,50 @@ class PaymentTransaction(models.Model):
         if self.provider_code != 'aba_payway':
             return child_void_tx
         
-        _, merchant_id, _, public_key_pem = self.provider_id._payway_get_api_cred()
-        payload_merchant_auth = {
-            "mc_id": merchant_id,
-            "tran_id": self.reference,
-        }
+        # NOTE:
+        # Payway automatically void the remaining balance upon partial capture.
+        # Calling the cancelled API in this case will result in an error. we skip the cancel API request 
+        # if a capture has already occurred and directly void the remaining balance.
+        # 
+        # Logic:
+        # - 'authorized': No capture has occurred yet; proceed with cancellation.
+        # - 'done': Partial captured; skip API, update Odoo locally.
+        if self.state != "done":
 
-        merchant_auth = self.provider_id._payway_calculate_merchant_auth(public_key_pem, payload_merchant_auth)
-        data: dict = self.provider_id._payway_api_void_transaction(merchant_auth)
-        _logger.info(
-            "Payway cancel request response for transaction wih reference %s:\n%s",
-            self.reference, pprint.pformat(data)
-        )
+            _, merchant_id, _, public_key_pem = self.provider_id._payway_get_api_cred()
+            payload_merchant_auth = {
+                "mc_id": merchant_id,
+                "tran_id": self.reference,
+            }
 
-        # Prepare data for _process_notification_data to handle
-        data.update({
-            'payment_status': const.STATUS_MAPPING['CANCELLED'],
-            'apv': self.provider_reference,
-        })
+            merchant_auth = self.provider_id._payway_calculate_merchant_auth(public_key_pem, payload_merchant_auth)
+            data: dict = self.provider_id._payway_api_void_transaction(merchant_auth)
+            _logger.info(
+                "Payway cancel request response for transaction wih reference %s:\n%s",
+                self.reference, pprint.pformat(data)
+            )
+
+            # Prepare data for _process_notification_data to handle
+            data.update({
+                'payment_status': const.STATUS_MAPPING['CANCELLED'],
+                'apv': self.provider_reference,
+            })
+        
+        else:
+            data = {
+                'payment_status': const.STATUS_MAPPING['CANCELLED'],
+                'apv': self.provider_reference,
+            }
+
+            _logger.info(
+                "Payway transaction wih reference %s already in 'Done' state, skipping void API call.",
+                self.reference
+            )
 
         self._handle_notification_data('aba_payway', data)
+
+        if child_void_tx:
+            child_void_tx._handle_notification_data('aba_payway', data)
         
         return child_void_tx
 
@@ -289,9 +316,10 @@ class PaymentTransaction(models.Model):
             )
             and self.state not in ('done', 'authorized')
         ):
-            tran_id = notification_data.get('tran_id')
+            # If tran_id exist, this mean the data come from webhook after complete the payment
+            tran_id = notification_data.get('tran_id', '')
 
-            if self.payment_method_id.code == 'card':
+            if self.payment_method_id.code == 'card' and tran_id:
                 try:
                     payway_transaction_detail: dict = self.provider_id._payway_api_get_transaction_detail(tran_id)
                     payment_method_type = payway_transaction_detail.get('data', {}).get('payment_type', '').lower()
