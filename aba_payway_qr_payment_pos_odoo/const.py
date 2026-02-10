@@ -1,9 +1,10 @@
 # TODO: Consts should be sets ideally
-PAYMENT_METHODS_CODES = [
+# FIX: Store list of constant in set.
+PAYMENT_METHODS_CODES = {
     'abapay_khqr',
     'wechat',
     'alipay',
-]
+}
 
 # TODO: Redundant?
 PAYMENT_METHODS_MAPPING = {

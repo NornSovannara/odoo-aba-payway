@@ -1,4 +1,7 @@
 # TODO: Consts should be sets ideally
+# FIX: Store list of constant in set
+# For hash keys, cannot be converted as order matters.
+
 API_URLS = {
     'production': 'https://checkout.payway.com.kh',
     'sandbox': 'https://checkout-sandbox.payway.com.kh',
@@ -28,11 +31,11 @@ QR_PAYMENT_SECURE_HASH_KEYS = [
 
 CHECK_TXN_SECURE_HASH_KEYS = ['req_time', 'merchant_id', 'tran_id']
 
-PAYMENT_METHODS_CODES = [
+PAYMENT_METHODS_CODES = {
     'abapay_khqr',
     'wechat',
     'alipay',
-]
+}
 
 # TODO: Redundant?
 PAYMENT_METHODS_MAPPING = {

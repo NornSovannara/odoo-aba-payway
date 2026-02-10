@@ -1,4 +1,6 @@
 # TODO: Consts should be sets ideally
+# FIX: Store list of constant in set.
+# For hash keys, cannot be converted as order matters.
 
 PAYMENT_METHODS_MAPPING = {
     'card': 'cards',
@@ -18,7 +20,7 @@ PAYWAY_PAYMENT_METHODS_MAPPING = {
     'wechat_pay': 'wechat',
 }
 
-DEFAULT_PAYMENT_METHODS_CODES = [
+DEFAULT_PAYMENT_METHODS_CODES = {
     'card',
     'abapay_khqr',
     'wechat_pay',
@@ -29,7 +31,7 @@ DEFAULT_PAYMENT_METHODS_CODES = [
     'mastercard',
     'unionpay',
     'jcb',
-]
+}
 
 PURCHASE_PAYMENT_SECURE_HASH_KEYS = [
     'req_time',
@@ -49,10 +51,10 @@ PURCHASE_PAYMENT_SECURE_HASH_KEYS = [
     'skip_success_page',
 ]
 
-SUPPORTED_CURRENCIES = [
+SUPPORTED_CURRENCIES = {
     'KHR',
     'USD',
-]
+}
 
 CURRENCY_DECIMALS = {
     'KHR': 0,
