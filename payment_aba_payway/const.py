@@ -5,19 +5,21 @@
 PAYMENT_METHODS_MAPPING = {
     'card': 'cards',
     # TODO: Redundant?
+    # COMMENT: While redundant, I decided to keep these for explicitness and validation.
     'abapay_khqr': 'abapay_khqr',
     'wechat_pay': 'wechat',
     'alipay': 'alipay',
 }
 
 # TODO: Keep only relevant ones. Use .get() when fetching from set.
+# COMMENT: Remove mapping
+# 'alipay': 'alipay'
+# 'wechat_pay': 'wechat'
 PAYWAY_PAYMENT_METHODS_MAPPING = {
     'visa': 'visa',
     'mastercard': 'mc',
     'unionpay': 'cup',
     'jcb': 'jcb',
-    'alipay': 'alipay',
-    'wechat_pay': 'wechat',
 }
 
 DEFAULT_PAYMENT_METHODS_CODES = {
