@@ -63,13 +63,8 @@ class PaymentProvider(models.Model):
         self.ensure_one()
         return self.journal_id.bank_account_id._payway_calculate_payment_secure_hash(api_key, payload, secure_hash_keys)
 
-    # TODO: Unused?
-    def _payway_api_check_transaction(self, tran_id: str):
-        # TODO: If parent function already ensures one, no need in in children
-        self.ensure_one()
-        return self.journal_id.bank_account_id._payway_api_check_transaction(tran_id)
-
     def _payway_api_get_transaction_detail(self, tran_id: str):
+        # TODO: If parent function already ensures one, no need in in children
         self.ensure_one()
         return self.journal_id.bank_account_id._payway_api_get_transaction_detail(tran_id)
 
