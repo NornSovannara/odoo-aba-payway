@@ -199,6 +199,7 @@ class ResBank(models.Model):
             }
 
             # TODO: QR_PAYMENT_SECURE_HASH_KEYS doesn't exist?
+            # Fix: use QR_PAYMENT_SECURE_HASH_KEYS now exist
             payload.update(
                 {'hash': self._payway_calculate_payment_secure_hash(api_key, payload, const.QR_PAYMENT_SECURE_HASH_KEYS)}
             )
