@@ -51,6 +51,7 @@ class ResBank(models.Model):
     # so, when user switch env, they dont have to re-enter cred
 
     # TODO: Ideally store credentials under payment.provider
+    
     # TODO Modify _payway_get_api_cred() to differentiate between prod and sandbox
     # FIX: differentiate cred field between prod and sandbox,
     # _payway_get_api_cred() also return base on enviroment
@@ -70,10 +71,6 @@ class ResBank(models.Model):
         groups='base.group_system',
     )
 
-
-    # TODO: Can use the same fields for both prod and sandbox.
-    # TODO: Ideally store credentials under payment.provider
-    # TODO Modify _payway_get_api_cred() to differentiate between prod and sandbox
     sandbox_payway_merchant_id = fields.Char(
         string='Merchant ID',
         help='Enter your unique PayWay Merchant ID. You can find it in the email registered for your PayWay Sandbox account.',
