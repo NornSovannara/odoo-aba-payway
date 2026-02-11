@@ -7,6 +7,7 @@ PAYMENT_METHODS_CODES = {
 }
 
 # TODO: Redundant?
+# COMMENT: Keep for explicitness.
 PAYMENT_METHODS_MAPPING = {
     'abapay_khqr': 'abapay_khqr',
     'wechat': 'wechat',
