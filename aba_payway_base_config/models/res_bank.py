@@ -5,6 +5,8 @@ import json
 from datetime import datetime
 from urllib.parse import urljoin
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from odoo import _, api, fields, models
 from odoo.addons.aba_payway_base_config import const
@@ -14,38 +16,30 @@ from odoo.exceptions import ValidationError
 MAX_RETRY = 2
 
 # TODO: Consider using Retry from urllib3 for a more standard implementation
+# FIX: use urlib3 Retry
 def _make_payway_api_request(base_url: str, endpoint: str, payload: dict):
-
     url = urljoin(base_url, endpoint)
-    headers = {"Content-Type": "application/json"}
 
-    # Retry 2 more time
-    for attempt in range(MAX_RETRY + 1):
-        try:
-            response = requests.post(
-                url, headers=headers, data=json.dumps(payload), verify=True
-            )
+    retry_strategy = Retry(
+        total=MAX_RETRY,
+        backoff_factor=1,
+        status_forcelist=[400, 429, 500, 502, 503, 504],
+        allowed_methods=["POST"],
+        raise_on_status=False,
+    )
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    session = requests.Session()
+    session.mount("https://", adapter)
 
-            if response.status_code != 200:
-                response.raise_for_status()
-
-            return response.json()
-
-        except requests.exceptions.HTTPError as err:
-            # Handle HTTP Exception from API
-            if attempt == MAX_RETRY:
-                return response.json()
-
-            continue
-
-        except (requests.RequestException, ValueError) as err:
-            if attempt == MAX_RETRY:
-                raise ValidationError(
-                    _("Could not establish a connection to PayWay API. Error: %s", err)
-                )
-            continue
-
-    raise ValidationError(_("Could not establish a connection to PayWay API."))
+    try:
+        response = session.post(
+            url, json=payload, timeout=30, verify=True
+        )
+        return response.json()
+    except (requests.RequestException, ValueError) as err:
+        raise ValidationError(
+            _("Could not establish a connection to PayWay API. Error: %s", err)
+        )
 
 
 class ResBank(models.Model):
