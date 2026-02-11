@@ -52,6 +52,9 @@ class ResBank(models.Model):
 
     # TODO: Ideally store credentials under payment.provider
     # TODO Modify _payway_get_api_cred() to differentiate between prod and sandbox
+    # FIX: differentiate cred field between prod and sandbox,
+    # _payway_get_api_cred() also return base on enviroment
+
     production_payway_merchant_id = fields.Char(
         string='Merchant ID',
         help="Enter your production PayWay Merchant ID. You'll receive this by email after obtaining a Go Live approval from ABA PayWay.",
@@ -61,21 +64,28 @@ class ResBank(models.Model):
         help="Enter your production PayWay API Key. You'll receive this by email after obtaining a Go Live approval from ABA PayWay.",
         groups='base.group_system',
     )
+    production_rsa_public_key = fields.Text(
+        string='RSA Public Key',
+        help="Enter your production PayWay RSA Public Key. You'll receive this by email after obtaining a Go Live approval from ABA PayWay.",
+        groups='base.group_system',
+    )
+
 
     # TODO: Can use the same fields for both prod and sandbox.
     # TODO: Ideally store credentials under payment.provider
     # TODO Modify _payway_get_api_cred() to differentiate between prod and sandbox
     sandbox_payway_merchant_id = fields.Char(
         string='Merchant ID',
-        related='production_payway_merchant_id',
-        readonly=False,
         help='Enter your unique PayWay Merchant ID. You can find it in the email registered for your PayWay Sandbox account.',
     )
     sandbox_payway_key = fields.Char(
         string='API Key',
-        related='production_payway_key',
-        readonly=False,
         help='Enter your unique PayWay API Key. You can find it in the email registered for your PayWay Sandbox account.',
+        groups='base.group_system',
+    )
+    sandbox_rsa_public_key = fields.Text(
+        string='RSA Public Key',
+        help='Enter your unique PayWay RSA Public Key. You can find it in the email registered for your PayWay Sandbox account.',
         groups='base.group_system',
     )
 
@@ -99,19 +109,6 @@ class ResBank(models.Model):
         required=True,        
     )
 
-    production_rsa_public_key = fields.Text(
-        string='RSA Public Key',
-        help="Enter your production PayWay RSA Public Key. You'll receive this by email after obtaining a Go Live approval from ABA PayWay.",
-        groups='base.group_system',
-    )
-
-    sandbox_rsa_public_key = fields.Text(
-        string='RSA Public Key',
-        related='production_rsa_public_key',
-        readonly=False,
-        help='Enter your unique PayWay RSA Public Key. You can find it in the email registered for your PayWay Sandbox account.',
-        groups='base.group_system',
-    )
 
     @api.constrains('digital_qr_lifetime', 'bill_qr_lifetime')
     def _check_qr_lifetimes(self):
@@ -199,7 +196,6 @@ class ResBank(models.Model):
             }
 
             # TODO: QR_PAYMENT_SECURE_HASH_KEYS doesn't exist?
-            # Fix: use QR_PAYMENT_SECURE_HASH_KEYS now exist
             payload.update(
                 {'hash': self._payway_calculate_payment_secure_hash(api_key, payload, const.QR_PAYMENT_SECURE_HASH_KEYS)}
             )
