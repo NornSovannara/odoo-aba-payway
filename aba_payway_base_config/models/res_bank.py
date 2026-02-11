@@ -46,6 +46,10 @@ class ResBank(models.Model):
     _inherit = "res.partner.bank"
 
     # TODO: Can use the same fields for both prod and sandbox.
+    # COMMENT: As per checkout with our PO,
+    # We decide th keep seperate fields for both env
+    # so, when user switch env, they dont have to re-enter cred
+
     # TODO: Ideally store credentials under payment.provider
     # TODO Modify _payway_get_api_cred() to differentiate between prod and sandbox
     production_payway_merchant_id = fields.Char(
