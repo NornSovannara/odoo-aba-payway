@@ -50,7 +50,6 @@ class PaymentProvider(models.Model):
         :return: (API URL, Merchant ID, API Key).
         :rtype: (str, str, str)
         """
-        self.ensure_one()
         return self.journal_id.bank_account_id._payway_get_api_cred()
     
     def _payway_calculate_payment_secure_hash(
@@ -65,6 +64,7 @@ class PaymentProvider(models.Model):
 
     def _payway_api_get_transaction_detail(self, tran_id: str):
         # TODO: If parent function already ensures one, no need in in children
+        # Fix: no `ensure_one()` in child function.
         self.ensure_one()
         return self.journal_id.bank_account_id._payway_api_get_transaction_detail(tran_id)
 
