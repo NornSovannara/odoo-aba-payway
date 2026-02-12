@@ -38,13 +38,7 @@ PAYMENT_METHODS_CODES = {
 }
 
 # TODO: Redundant?
-PAYMENT_METHODS_MAPPING = {
-    'abapay_khqr': 'abapay_khqr',
-    'wechat': 'wechat',
-    'alipay': 'alipay',
-}
-
-# TODO: Redundant?
+# COMMENT: Keep for explicitness.
 POS_ORDER_QR_TYPE = {
     'screen': 'screen',
     'bill': 'bill',
