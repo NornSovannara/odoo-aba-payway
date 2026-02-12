@@ -12,7 +12,7 @@ PAYMENT_METHODS_MAPPING = {
 }
 
 # TODO: Keep only relevant ones. Use .get() when fetching from set.
-# COMMENT: Remove mapping
+# FIX: Remove mapping
 # 'alipay': 'alipay'
 # 'wechat_pay': 'wechat'
 PAYWAY_PAYMENT_METHODS_MAPPING = {
