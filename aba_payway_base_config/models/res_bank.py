@@ -23,7 +23,7 @@ def _make_payway_api_request(base_url: str, endpoint: str, payload: dict):
     retry_strategy = Retry(
         total=MAX_RETRY,
         backoff_factor=1,
-        status_forcelist=[400, 429, 500, 502, 503, 504],
+        status_forcelist=[400, 401, 403, 404, 405, 429, 500, 502, 503, 504],
         allowed_methods=["POST"],
         raise_on_status=False,
     )
