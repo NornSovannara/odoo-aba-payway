@@ -55,7 +55,7 @@ patch(PosStore.prototype, {
         const timestamp = Math.floor(Date.now() / 1000 / 60 / 60 / 24);
         const suffix = this._toBase62(timestamp);
 
-        const orderReference = payment.pos_order_id.pos_reference;
+        const orderReference = payment.pos_order_id.pos_reference.split(" ").at(-1);
 
         const transaction_id = `${orderReference}-${suffix}`;
         return transaction_id;
