@@ -22,6 +22,8 @@ class PayWayController(http.Controller):
             # request.env['res.partner.bank'].sudo().with_context(active_test=False).search([
             #     'xyz'='abc'
             # ]).payway_key
+            # COMMENT - TODO: what field do I search to get the bank that user config payway in?
+            # I don't see any identifier that can use to search
 
             # Send notification from backend
             request.env['bus.bus'].sudo()._sendone(
