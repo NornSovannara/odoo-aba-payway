@@ -18,10 +18,10 @@ class PaymentCaptureWizard(models.TransientModel):
     def action_capture(self):
 
         # TODO: Check with Odoo team, is there any concerns on enforcing void_remaining_amount here on wizard? 
-        # From what I can see, there might be multiple providers in a single capture wizard session.
+        # From what I can see, there might be multiple transactions in a single capture wizard session.
         # Question:
-        # 1. What is the case where there are more than 1 payment provider in a single wizard? 
-        # 2. Is this enforcement affect other payment provider?
+        # 1. if there is multiple transactions, can they be from different providers?
+        # 2. If yes, does enforce void_remaining_amount have any impact on other providers?
         # 3. How do i enforce only for Payway provider without affecting other providers in the same wizard session?
 
         for wizard in self:
