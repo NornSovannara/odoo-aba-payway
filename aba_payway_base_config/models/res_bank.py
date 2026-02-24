@@ -1,7 +1,6 @@
 import hashlib
 import hmac
 import base64
-import json
 from datetime import datetime
 from urllib.parse import urljoin
 import requests
@@ -23,17 +22,18 @@ def _make_payway_api_request(base_url: str, endpoint: str, payload: dict):
     retry_strategy = Retry(
         total=MAX_RETRY,
         backoff_factor=1,
-        status_forcelist=[400, 401, 403, 404, 405, 429, 500, 502, 503, 504],
+        status_forcelist=[429, 500, 502, 503, 504],
         allowed_methods=["POST"],
         raise_on_status=False,
     )
     adapter = HTTPAdapter(max_retries=retry_strategy)
     session = requests.Session()
     session.mount("https://", adapter)
+    session.mount("http://", adapter)
 
     try:
         response = session.post(
-            url, json=payload, timeout=30, verify=True
+            url, json=payload, timeout=10, verify=True
         )
         return response.json()
     except (requests.RequestException, ValueError) as err:
