@@ -1,5 +1,4 @@
 import json
-import time
 import base64
 
 from odoo.exceptions import UserError
@@ -98,27 +97,6 @@ class PaymentProvider(models.Model):
             encrypted.extend(public_key.encrypt(chunk, padding.PKCS1v15()))
 
         return base64.b64encode(bytes(encrypted)).decode("utf-8")
-
-    def _compute_transaction_suffix(self):
-        """Convert timestamp into base62, for suffix transaction reference.
-
-        :rtype: str
-        """        
-
-        def to_base62(n: int) -> str:
-            if n == 0:
-                return const.BASE62_ALPHABET[0]
-            
-            base62 = []
-            while n > 0:
-                n, r = divmod(n, 62)
-                base62.append(const.BASE62_ALPHABET[r])
-            
-            return ''.join(reversed(base62))
-        
-        timestamp = int(time.time())
-        encoded = to_base62(timestamp)
-        return encoded
     
 
     def _get_default_payment_method_codes(self):
