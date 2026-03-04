@@ -1,7 +1,7 @@
 
 from odoo.exceptions import UserError
 from odoo import _, models, fields, api
-from odoo.addons.aba_payway_base_config import const
+from odoo.addons.aba_payway_qr_payment_pos_odoo import const
 
 
 class PosPaymentMethod(models.Model):

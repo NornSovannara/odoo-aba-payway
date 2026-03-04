@@ -2,7 +2,7 @@ import { PosStore } from "@point_of_sale/app/store/pos_store";
 import { patch } from "@web/core/utils/patch";
 import { user } from "@web/core/user";
 
-import { PAYWAY_QR_CODE_METHOD, MODEL, POS_ORDER_QR_TYPE, BASE62 } from "./const";
+import { PAYWAY_QR_CODE_METHOD, MODEL, POS_ORDER_QR_TYPE, BASE62, PAYWAY_TRAN_ID_MAX_LENGTH } from "./const";
 
 patch(PosStore.prototype, {
 
@@ -51,13 +51,15 @@ patch(PosStore.prototype, {
 
     _paywayCreateTxnId(payment) {
 
-        // Get timstamp in days for suffix, so that transaction id will not be too long
-        const timestamp = Math.floor(Date.now() / 1000 / 60 / 60 / 24);
+        // Get timstamp in seconds for suffix
+        const timestamp = Math.floor(Date.now() / 1000);
         const suffix = this._toBase62(timestamp);
+        const lenSuffix = suffix.length;
 
         const orderReference = payment.pos_order_id.pos_reference.split(" ").at(-1);
+        const prefix = orderReference.slice(0, PAYWAY_TRAN_ID_MAX_LENGTH - 1 - lenSuffix);
 
-        const transaction_id = `${orderReference}-${suffix}`;
+        const transaction_id = `${prefix}-${suffix}`;
         return transaction_id;
     }
 });
