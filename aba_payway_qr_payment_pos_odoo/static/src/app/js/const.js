@@ -12,3 +12,4 @@ export const POS_ORDER_QR_TYPE = {
 }
 
 export const BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+export const PAYWAY_TRAN_ID_MAX_LENGTH = 20;
