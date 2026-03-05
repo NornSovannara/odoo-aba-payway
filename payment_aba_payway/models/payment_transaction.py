@@ -115,7 +115,7 @@ class PaymentTransaction(models.Model):
         rendering_values.update(
             {
                 'hash': self.provider_id._payway_calculate_payment_secure_hash(
-                    api_key, rendering_values
+                    api_key, rendering_values, const.PURCHASE_PAYMENT_SECURE_HASH_KEYS
                 )
             }
         )
