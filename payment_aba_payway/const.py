@@ -78,3 +78,13 @@ STATUS_MAPPING = {
 
 BASE62_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 PAYWAY_TRAN_ID_MAX_LENGTH = 20
+
+API_URLS = {
+    'production': 'https://checkout.payway.com.kh',
+    'sandbox': 'https://checkout-sandbox.payway.com.kh',
+}
+
+REFUND_TXN_SECURE_HASH_KEYS = ['request_time', 'merchant_id', 'merchant_auth']
+CHECK_TXN_SECURE_HASH_KEYS = ['req_time', 'merchant_id', 'tran_id']
+VOID_TXN_SECURE_HASH_KEYS = ['merchant_id', 'merchant_auth', 'request_time']
+CAPTURE_TXN_SECURE_HASH_KEYS = ["merchant_auth", "request_time", "merchant_id"]

@@ -8,7 +8,7 @@
     'description': """
         This module allows you to display ABA PayWay QR payment option on your e-commerce website.
     """,
-    'depends': ['payment', 'aba_payway_base_config'],
+    'depends': ['payment'],
     'external_dependencies': {
         'python': ['cryptography']
     },
