@@ -8,7 +8,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from odoo import _, api, fields, models
-from odoo.addons.aba_payway_base_config import const
+from odoo.addons.aba_payway_qr_payment_pos_odoo import const
 from odoo.exceptions import ValidationError
 
 MAX_RETRY = 2

@@ -5,7 +5,7 @@ import pprint
 from werkzeug.exceptions import Forbidden
 from odoo import http
 from odoo.http import request
-from odoo.addons.aba_payway_base_config import const
+from odoo.addons.aba_payway_qr_payment_pos_odoo import const
 
 _logger = logging.getLogger(__name__)
 
