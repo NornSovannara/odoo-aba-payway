@@ -6,7 +6,12 @@
     'description': """
         Let customers pay using QR codes in Odoo POS.\n
         This plugin supports multiple payment QR formats (ABA KHQR, WeChat Pay, Alipay) by displaying the payment QR on the POS customer screen or printed bill (only applicable for POS restaurant modules).
-    
+
+        To get started: \n
+        Go to Contacts → Configuration → Bank Accounts, choose the bank account you want to accept payments with, then fill in your API Key and Merchant ID as provided by ABA PayWay.
+        
+        Need a Sandbox account? `Register here <https://sandbox.payway.com.kh/login/>`_
+
         To set up: \n
         Go to POS module → Configuration → Payment Methods \n
         Click Add New, then in the Integration section: \n
@@ -21,11 +26,12 @@
     'author': 'ABA Bank',
     'category': 'Point of Sale',
     'depends': [
+        'account',
         'point_of_sale',
-        'pos_restaurant',
-        'aba_payway_base_config',
+        'pos_restaurant',        
     ],
     'data': [
+        'views/res_bank.xml',
         'views/pos_payment_method_views.xml',
     ],
     'assets': {
