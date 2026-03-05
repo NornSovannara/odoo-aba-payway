@@ -9,7 +9,6 @@ from urllib3.util.retry import Retry
 
 from odoo import _, api, fields, models
 from odoo.addons.aba_payway_base_config import const
-from odoo.addons.payment import utils as payment_utils
 from odoo.exceptions import ValidationError
 
 MAX_RETRY = 2
@@ -65,11 +64,6 @@ class ResBank(models.Model):
         help="Enter your production PayWay API Key. You'll receive this by email after obtaining a Go Live approval from ABA PayWay.",
         groups='base.group_system',
     )
-    production_rsa_public_key = fields.Text(
-        string='RSA Public Key',
-        help="Enter your production PayWay RSA Public Key. You'll receive this by email after obtaining a Go Live approval from ABA PayWay.",
-        groups='base.group_system',
-    )
 
     sandbox_payway_merchant_id = fields.Char(
         string='Merchant ID',
@@ -78,11 +72,6 @@ class ResBank(models.Model):
     sandbox_payway_key = fields.Char(
         string='API Key',
         help='Enter your unique PayWay API Key. You can find it in the email registered for your PayWay Sandbox account.',
-        groups='base.group_system',
-    )
-    sandbox_rsa_public_key = fields.Text(
-        string='RSA Public Key',
-        help='Enter your unique PayWay RSA Public Key. You can find it in the email registered for your PayWay Sandbox account.',
         groups='base.group_system',
     )
 
@@ -159,7 +148,7 @@ class ResBank(models.Model):
             qr_type = self._context.get('qr_type')
             qr_tran_id = self._context.get('qr_tran_id') if self._context.get('qr_tran_id') else ""
 
-            api_url, merchant_id, api_key, _ = self._payway_get_api_cred()
+            api_url, merchant_id, api_key = self._payway_get_api_cred()
             self._payway_api_close_transaction(qr_tran_id)
 
             base_odoo_url:str = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
@@ -247,25 +236,6 @@ class ResBank(models.Model):
             structured_communication,
         )
 
-    def _get_qr_code_base64(
-        self,
-        qr_method,
-        amount,
-        currency,
-        debtor_partner,
-        free_communication,
-        structured_communication,
-    ):
-        
-        return super()._get_qr_code_base64(
-            qr_method,
-            amount,
-            currency,
-            debtor_partner,
-            free_communication,
-            structured_communication,
-        )
-
     def _payway_api_close_transaction(self, qr_tran_id: str):
         """Close payway transaction.
 
@@ -273,7 +243,7 @@ class ResBank(models.Model):
         :rtype: response dict
         """
 
-        api_url, merchant_id, api_key, _ = self._payway_get_api_cred()
+        api_url, merchant_id, api_key = self._payway_get_api_cred()
         payload = {
             'req_time': datetime.now().strftime("%Y%m%d%H%M%S"),
             'merchant_id': merchant_id,
@@ -302,7 +272,7 @@ class ResBank(models.Model):
         :return: transaction id.
         :rtype: response dict
         """
-        api_url, merchant_id, api_key, _ = self._payway_get_api_cred()
+        api_url, merchant_id, api_key = self._payway_get_api_cred()
         payload = {
             'req_time': datetime.now().strftime("%Y%m%d%H%M%S"),
             'merchant_id': merchant_id,
@@ -313,104 +283,6 @@ class ResBank(models.Model):
         )
         response = _make_payway_api_request(
             api_url, '/api/payment-gateway/v1/payments/check-transaction-2', payload
-        )
-
-        if str(response['status']['code']) == '00':
-            return response
-
-        raise ValidationError(self._payway_construct_error_message(response))
-
-
-    def _payway_api_get_transaction_detail(self, qr_tran_id: str):
-        """Get payway transaction detail.
-
-        :return: transaction id.
-        :rtype: reponse dict
-        """
-        api_url, merchant_id, api_key, _ = self._payway_get_api_cred()
-        payload = {
-            'req_time': datetime.now().strftime("%Y%m%d%H%M%S"),
-            'merchant_id': merchant_id,
-            'tran_id': qr_tran_id,
-        }
-        payload.update(
-            {'hash': self._payway_calculate_payment_secure_hash(api_key, payload, const.CHECK_TXN_SECURE_HASH_KEYS)}
-        )
-
-        response = _make_payway_api_request(
-            api_url, '/api/payment-gateway/v1/payments/transaction-detail', payload
-        )
-
-        if str(response['status']['code']) == '00':
-            return response
-
-        raise ValidationError(self._payway_construct_error_message(response))
-
-    def _payway_api_refund_transaction(self, merchant_auth: str):
-        """Request refund transaction.
-
-        :return: transaction id.
-        :rtype: reponse dict
-        """
-        api_url, merchant_id, api_key, _ = self._payway_get_api_cred()
-        req_time = datetime.now().strftime('%Y%m%d%H%M%S')
-
-        payload = {
-            "request_time": req_time,
-            "merchant_id": merchant_id,
-            "merchant_auth": merchant_auth,
-        }
-        payload.update(
-            {'hash': self._payway_calculate_payment_secure_hash(api_key, payload, const.REFUND_TXN_SECURE_HASH_KEYS)}
-        )
-
-        response = _make_payway_api_request(
-            api_url, '/api/merchant-portal/merchant-access/online-transaction/refund', payload
-        )
-
-        if str(response['status']['code']) == '00':
-            return response
-
-        raise ValidationError(self._payway_construct_error_message(response))
-
-    def _payway_api_void_transaction(self, merchant_auth: str):
-        api_url, merchant_id, api_key, _ = self._payway_get_api_cred()
-        req_time = datetime.now().strftime('%Y%m%d%H%M%S')
-
-        payload = {
-            "merchant_id": merchant_id,
-            "merchant_auth": merchant_auth,
-            "request_time": req_time,
-        }
-
-        payload.update(
-            {'hash': self._payway_calculate_payment_secure_hash(api_key, payload, const.VOID_TXN_SECURE_HASH_KEYS)}
-        )
-
-        response = _make_payway_api_request(
-            api_url, '/api/merchant-portal/merchant-access/online-transaction/pre-auth-cancellation', payload
-        )
-
-        if str(response['status']['code']) == '00':
-            return response
-
-        raise ValidationError(self._payway_construct_error_message(response))
-
-    def _payway_api_capture_transaction(self, merchant_auth: str):
-        api_url, merchant_id, api_key, _ = self._payway_get_api_cred()
-        req_time = datetime.now().strftime('%Y%m%d%H%M%S')
-
-        payload = {
-            "merchant_auth": merchant_auth,
-            "request_time": req_time,
-            "merchant_id": merchant_id,
-        }
-        payload.update(
-            {'hash': self._payway_calculate_payment_secure_hash(api_key, payload, const.CAPTURE_TXN_SECURE_HASH_KEYS)}
-        )
-
-        response = _make_payway_api_request(
-            api_url, '/api/merchant-portal/merchant-access/online-transaction/pre-auth-completion', payload
         )
 
         if str(response['status']['code']) == '00':
@@ -432,7 +304,6 @@ class ResBank(models.Model):
                 api_url,
                 self.production_payway_merchant_id,
                 self.production_payway_key,
-                self.production_rsa_public_key,
             )
         elif self.payway_environment == 'sandbox':
             api_url = const.API_URLS['sandbox']
@@ -440,7 +311,6 @@ class ResBank(models.Model):
                 api_url,
                 self.sandbox_payway_merchant_id,
                 self.sandbox_payway_key,
-                self.sandbox_rsa_public_key,
             )
 
     def _payway_calculate_payment_secure_hash(self, api_key: str, payload: dict, secure_hash_keys: list):

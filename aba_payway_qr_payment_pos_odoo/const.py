@@ -52,7 +52,4 @@ WEB_HOOK_PATH = {
     'pos': '/pos/payway/webhook',
 }
 
-REFUND_TXN_SECURE_HASH_KEYS = ['request_time', 'merchant_id', 'merchant_auth']
-VOID_TXN_SECURE_HASH_KEYS = ['merchant_id', 'merchant_auth', 'request_time']
-CAPTURE_TXN_SECURE_HASH_KEYS = ["merchant_auth", "request_time", "merchant_id"]
 

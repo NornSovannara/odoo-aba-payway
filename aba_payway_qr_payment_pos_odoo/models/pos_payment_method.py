@@ -1,4 +1,3 @@
-
 from odoo.exceptions import UserError
 from odoo import _, models, fields, api
 from odoo.addons.aba_payway_qr_payment_pos_odoo import const
