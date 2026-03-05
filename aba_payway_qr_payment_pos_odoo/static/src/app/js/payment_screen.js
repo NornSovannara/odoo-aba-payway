@@ -60,6 +60,9 @@ patch(PaymentScreen.prototype, {
             line.payment_method_id.payment_method_type === "qr_code" &&
             PAYWAY_QR_CODE_METHOD.includes(line.payment_method_id.qr_code_method)
         ) {
+            // Use Odoo receipt number for payway unique transaction id
+            line.transaction_id = this.pos._paywayCreateTxnId(line);
+
             if (!this.channelName) {
                 const busService = this.env.services.bus_service;
 

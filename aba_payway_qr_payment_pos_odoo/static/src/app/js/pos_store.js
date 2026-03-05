@@ -2,14 +2,12 @@ import { PosStore } from "@point_of_sale/app/store/pos_store";
 import { patch } from "@web/core/utils/patch";
 import { user } from "@web/core/user";
 
-import { PAYWAY_QR_CODE_METHOD, MODEL, POS_ORDER_QR_TYPE } from "./const";
+import { PAYWAY_QR_CODE_METHOD, MODEL, POS_ORDER_QR_TYPE, BASE62, PAYWAY_TRAN_ID_MAX_LENGTH } from "./const";
 
 patch(PosStore.prototype, {
 
     async showQR(payment) {
 
-        // Use Odoo receipt number for payway unique transaction id
-        payment.transaction_id = this._paywayCreateTxnId(payment);
         user.updateContext({
             model: MODEL,
             qr_type: POS_ORDER_QR_TYPE["screen"],
@@ -39,19 +37,29 @@ patch(PosStore.prototype, {
         return res;
     },
 
+    _toBase62(num) {
+        if (num === 0) return BASE62[0];
+
+        let result = "";
+        while (num > 0) {
+            const rem = num % 62;
+            result = BASE62[rem] + result;
+            num = Math.floor(num / 62);
+        }
+        return result;
+    },
+
     _paywayCreateTxnId(payment) {
-        const today = new Date();
-        const day = String(today.getDate()).padStart(2, '0');
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const year = String(today.getFullYear()).slice(-2);
 
-        const formattedDate = year + month + day;
-        const orderReference = payment.pos_order_id.pos_reference
-            .split(" ")
-            .at(-1)
-            .replaceAll("-", "");
+        // Get timstamp in seconds for suffix
+        const timestamp = Math.floor(Date.now() / 1000);
+        const suffix = this._toBase62(timestamp);
+        const lenSuffix = suffix.length;
 
-        const transaction_id = `P${formattedDate}${orderReference}`;
+        const orderReference = payment.pos_order_id.pos_reference.split(" ").at(-1);
+        const prefix = orderReference.slice(0, PAYWAY_TRAN_ID_MAX_LENGTH - 1 - lenSuffix);
+
+        const transaction_id = `${prefix}-${suffix}`;
         return transaction_id;
     }
 });

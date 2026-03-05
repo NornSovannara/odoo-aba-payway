@@ -1,0 +1,39 @@
+services:
+  pg:
+    image: postgres:17
+    container_name: pg
+    user: root
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=odoo
+      - POSTGRES_PASSWORD=odoo123
+      - POSTGRES_DB=postgres
+    restart: unless-stopped
+    volumes:
+      - local_pgdata:/var/lib/postgresql/data
+
+  odoo:
+    image: odoo:18
+    container_name: odoo
+    user: root
+    ports:
+      - "8069:8069"
+      - "8072:8072"
+    tty: true
+    environment:
+      - HOST=pg
+      - USER=odoo
+      - PASSWORD=odoo123
+      - PIP_BREAK_SYSTEM_PACKAGES=1
+    restart: unless-stopped
+    volumes:
+      # - ./entrypoint.sh:/entrypoint.sh
+      - ./addons:/mnt/extra-addons
+      - ./etc:/etc/odoo
+
+    depends_on:
+      - pg
+
+volumes:
+  local_pgdata:
