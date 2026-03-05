@@ -1,55 +1,59 @@
 import hashlib
 import hmac
 import base64
-import json
 from datetime import datetime
 from urllib.parse import urljoin
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from odoo import _, api, fields, models
-from odoo.addons.aba_payway_base_config import const
-from odoo.addons.payment import utils as payment_utils
+from odoo.addons.aba_payway_qr_payment_pos_odoo import const
 from odoo.exceptions import ValidationError
 
 MAX_RETRY = 2
 
-
+# TODO: Consider using Retry from urllib3 for a more standard implementation
+# FIX: use urlib3 Retry
 def _make_payway_api_request(base_url: str, endpoint: str, payload: dict):
-
     url = urljoin(base_url, endpoint)
-    headers = {"Content-Type": "application/json"}
 
-    # Retry 2 more time
-    for attempt in range(MAX_RETRY + 1):
-        try:
-            response = requests.post(
-                url, headers=headers, data=json.dumps(payload), verify=True
-            )
+    retry_strategy = Retry(
+        total=MAX_RETRY,
+        backoff_factor=1,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["POST"],
+        raise_on_status=False,
+    )
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    session = requests.Session()
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
 
-            if response.status_code != 200:
-                response.raise_for_status()
-
-            return response.json()
-
-        except requests.exceptions.HTTPError as err:
-            # Handle HTTP Exception from API
-            if attempt == MAX_RETRY:
-                return response.json()
-
-            continue
-
-        except (requests.RequestException, ValueError) as err:
-            if attempt == MAX_RETRY:
-                raise ValidationError(
-                    _("Could not establish a connection to PayWay API. Error: %s", err)
-                )
-            continue
-
-    raise ValidationError(_("Could not establish a connection to PayWay API."))
+    try:
+        response = session.post(
+            url, json=payload, timeout=10, verify=True
+        )
+        return response.json()
+    except (requests.RequestException, ValueError) as err:
+        raise ValidationError(
+            _("Could not establish a connection to PayWay API. Error: %s", err)
+        )
 
 
 class ResBank(models.Model):
     _inherit = "res.partner.bank"
+
+    # TODO: Can use the same fields for both prod and sandbox.
+    # COMMENT: As per checkout with our PO,
+    # We decide th keep seperate fields for both env
+    # so, when user switch env, they dont have to re-enter cred
+
+    # TODO: Ideally store credentials under payment.provider
+    
+    # TODO Modify _payway_get_api_cred() to differentiate between prod and sandbox
+    # FIX: differentiate cred field between prod and sandbox,
+    # _payway_get_api_cred() also return base on enviroment
 
     production_payway_merchant_id = fields.Char(
         string='Merchant ID',
@@ -91,8 +95,9 @@ class ResBank(models.Model):
         required=True,        
     )
 
+
     @api.constrains('digital_qr_lifetime', 'bill_qr_lifetime')
-    def _check_qr_lifetimes(self):        
+    def _check_qr_lifetimes(self):
         for record in self:
             if not isinstance(record.digital_qr_lifetime, int) or record.digital_qr_lifetime < 1:
                 raise ValidationError("QR on screen expire time must be an integer and at least 1 minute.")
@@ -115,22 +120,22 @@ class ResBank(models.Model):
         # Raise error msg
 
         if self.sudo().payway_environment == 'disable':
-            return _("ABA PayWay is currently disabled. Please select an environment to proceed.")
+            return _("Payway: ABA PayWay is currently disabled. Please select an environment to proceed.")
         
         if currency.name not in ['USD', 'KHR']:
-            return _("This payment method only supports transactions in USD or KHR currency.\nTo continue, please update your store currency and try again.")
+            return _("Payway: This payment method only supports transactions in USD or KHR currency.\nTo continue, please update your store currency and try again.")
 
         if self.sudo().payway_environment == 'production':
             if not self.sudo().production_payway_merchant_id:
-                return _("For Production environment, the 'PayWay Merchant ID' is required.")
+                return _("Payway: For Production environment, the 'PayWay Merchant ID' is required.")
             if not self.sudo().production_payway_key:
-                return _("For Production environment, the 'PayWay API Key' is required.")
+                return _("Payway: For Production environment, the 'PayWay API Key' is required.")
 
         elif self.sudo().payway_environment == 'sandbox':
             if not self.sudo().sandbox_payway_merchant_id:
-                return _("For Sandbox environment, the 'PayWay Merchant ID' is required.")
+                return _("Payway: For Sandbox environment, the 'PayWay Merchant ID' is required.")
             if not self.sudo().sandbox_payway_key:
-                return _("For Sandbox environment, the 'PayWay API Key' is required.")
+                return _("Payway: For Sandbox environment, the 'PayWay API Key' is required.")
 
         return super()._get_error_messages_for_qr(qr_method, debtor_partner, currency)
     
@@ -175,8 +180,11 @@ class ResBank(models.Model):
                     'utf-8'
                 ),
             }
+
+            # TODO: QR_PAYMENT_SECURE_HASH_KEYS doesn't exist?
+            # Fix: Create QR_PAYMENT_SECURE_HASH_KEYS
             payload.update(
-                {'hash': self._payway_calculate_payment_secure_hash(api_key, payload)}
+                {'hash': self._payway_calculate_payment_secure_hash(api_key, payload, const.QR_PAYMENT_SECURE_HASH_KEYS)}
             )
 
             return api_url, payload
@@ -210,7 +218,7 @@ class ResBank(models.Model):
 
             if str(response['status']['code']) != '0':
                 # Payway return error
-                raise ValidationError(response['status']['message'])
+                raise ValidationError(self._payway_construct_error_message(response))
 
             return {
                 'barcode_type': 'QR',
@@ -228,30 +236,11 @@ class ResBank(models.Model):
             structured_communication,
         )
 
-    def _get_qr_code_base64(
-        self,
-        qr_method,
-        amount,
-        currency,
-        debtor_partner,
-        free_communication,
-        structured_communication,
-    ):
-        
-        return super()._get_qr_code_base64(
-            qr_method,
-            amount,
-            currency,
-            debtor_partner,
-            free_communication,
-            structured_communication,
-        )
-
     def _payway_api_close_transaction(self, qr_tran_id: str):
         """Close payway transaction.
 
         :return: transaction id.
-        :rtype: reponse dict
+        :rtype: response dict
         """
 
         api_url, merchant_id, api_key = self._payway_get_api_cred()
@@ -261,7 +250,7 @@ class ResBank(models.Model):
             'tran_id': qr_tran_id,
         }
         payload.update(
-            {'hash': self._payway_calculate_check_txn_secure_hash(api_key, payload)}
+            {'hash': self._payway_calculate_payment_secure_hash(api_key, payload, const.CHECK_TXN_SECURE_HASH_KEYS)}
         )
         response = _make_payway_api_request(
             api_url, '/api/payment-gateway/v1/payments/close-transaction', payload
@@ -274,14 +263,14 @@ class ResBank(models.Model):
             # Success or Transaction no found
             return response
 
-        raise ValidationError(response['status']['message'])
+        raise ValidationError(self._payway_construct_error_message(response))
     
 
     def _payway_api_check_transaction(self, qr_tran_id: str):
         """Check payway transaction.
 
         :return: transaction id.
-        :rtype: reponse dict
+        :rtype: response dict
         """
         api_url, merchant_id, api_key = self._payway_get_api_cred()
         payload = {
@@ -290,7 +279,7 @@ class ResBank(models.Model):
             'tran_id': qr_tran_id,
         }
         payload.update(
-            {'hash': self._payway_calculate_check_txn_secure_hash(api_key, payload)}
+            {'hash': self._payway_calculate_payment_secure_hash(api_key, payload, const.CHECK_TXN_SECURE_HASH_KEYS)}
         )
         response = _make_payway_api_request(
             api_url, '/api/payment-gateway/v1/payments/check-transaction-2', payload
@@ -299,8 +288,7 @@ class ResBank(models.Model):
         if str(response['status']['code']) == '00':
             return response
 
-        raise ValidationError(response['status']['message'])
-
+        raise ValidationError(self._payway_construct_error_message(response))
 
     def _payway_get_api_cred(self):
         """Return the URL of the API corresponding to the selected payway environment.
@@ -325,7 +313,7 @@ class ResBank(models.Model):
                 self.sandbox_payway_key,
             )
 
-    def _payway_calculate_payment_secure_hash(self, api_key: str, payload: dict):
+    def _payway_calculate_payment_secure_hash(self, api_key: str, payload: dict, secure_hash_keys: list):
         """Compute the secure hash for the provided data according to the PayWay documentation.
 
         :param dict data: The data to hash.
@@ -333,7 +321,6 @@ class ResBank(models.Model):
         :rtype: str
         """
 
-        secure_hash_keys = const.PAYMENT_SECURE_HASH_KEYS
         data_to_sign = [str(payload.get(k, '')) for k in secure_hash_keys]
         signing_string = ''.join(data_to_sign)
         hmac_hash = hmac.new(
@@ -342,18 +329,42 @@ class ResBank(models.Model):
         base64_encoded = base64.b64encode(hmac_hash).decode()
         return base64_encoded
 
-    def _payway_calculate_check_txn_secure_hash(self, api_key: str, payload: dict):
-        """Compute the secure hash for the provided data according to the PayWay documentation for checking transaction.
 
-        :param dict data: The data to hash.
+    def _payway_calculate_webhook_secure_hash(self, api_key: str, payload: dict):
+        """Compute the secure hash for verifying webhook notifications from Payway.
+
         :return: The calculated hash.
         :rtype: str
         """
-        secure_hash_keys = const.CHECK_TXN_SECURE_HASH_KEYS
-        data_to_sign = [str(payload[k]) for k in secure_hash_keys]
-        signing_string = ''.join(data_to_sign)
+
+        data_to_sign = sorted(payload.keys())
+        signing_string = ''.join([str(payload.get(k, '')) for k in data_to_sign])
         hmac_hash = hmac.new(
             api_key.encode(), signing_string.encode(), hashlib.sha512
         ).digest()
         base64_encoded = base64.b64encode(hmac_hash).decode()
         return base64_encoded
+
+
+    def _payway_construct_error_message(self, response: dict) -> str:
+        """Construct a user-friendly error message from the PayWay API response.
+
+        :param dict response: The JSON response from PayWay API.
+        :return: A formatted error string.
+        :rtype: str
+        """
+        status = response.get('status', {})
+        main_msg = status.get('message', _("An unexpected error occurred."))
+        errors = status.get('errors', {})
+
+        if not errors:
+            return main_msg
+
+        error_lines = []
+        for field, messages in errors.items():
+            # Format field name (e.g., 'tran_id' -> 'Tran id')
+            fn = field.replace('_', ' ').capitalize()
+            for msg in messages:
+                error_lines.append(f"- {fn}: {msg}")
+
+        return f"{main_msg}\n" + "\n".join(error_lines)
