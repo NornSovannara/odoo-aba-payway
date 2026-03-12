@@ -1,10 +1,15 @@
+import base64
+
 from odoo.exceptions import UserError
 from odoo import _, models, fields, api
+from odoo.modules.module import get_module_resource
 from odoo.addons.aba_payway_qr_payment_pos_odoo import const
 
 
 class PosPaymentMethod(models.Model):
     _inherit = 'pos.payment.method'
+
+    image = fields.Image("Image", max_width=128, max_height=128)
 
     allow_qr_on_bill = fields.Boolean(
         string="Allow QR on Bill",
@@ -23,6 +28,22 @@ class PosPaymentMethod(models.Model):
         related='journal_id.bank_account_id.bill_qr_lifetime',
         readonly=True,
     )
+
+    @api.onchange('qr_code_method')
+    def _onchange_qr_code_method(self):
+        for record in self:
+            # Only auto-populate image for PayWay QR methods
+            if record.qr_code_method not in const.PAYMENT_METHODS_CODES:
+                continue
+            
+            image_filename = const.QR_METHOD_IMAGE_MAP.get(record.qr_code_method)
+            if image_filename:
+                image_path = get_module_resource(
+                    'aba_payway_qr_payment_pos_odoo', 'static', 'src', 'img', image_filename,
+                )
+                if image_path:
+                    with open(image_path, 'rb') as f:
+                        record.image = base64.b64encode(f.read())
 
     
     def get_qr_code(self, amount, free_communication, structured_communication, currency, debtor_partner):

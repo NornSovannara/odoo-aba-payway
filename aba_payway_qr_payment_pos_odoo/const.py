@@ -53,3 +53,8 @@ WEB_HOOK_PATH = {
 }
 
 
+QR_METHOD_IMAGE_MAP = {
+    'abapay_khqr': 'aba_khqr.png',
+    'wechat': 'wechat.png',
+    'alipay': 'alipay.png',
+}
