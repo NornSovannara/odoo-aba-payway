@@ -58,3 +58,9 @@ QR_METHOD_IMAGE_MAP = {
     'wechat': 'wechat.png',
     'alipay': 'alipay.png',
 }
+
+QR_METHOD_NAME_MAP = {
+    'abapay_khqr': 'ABA KHQR',
+    'wechat': 'WeChat Pay',
+    'alipay': 'Alipay',
+}

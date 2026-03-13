@@ -32,10 +32,15 @@ class PosPaymentMethod(models.Model):
     @api.onchange('qr_code_method')
     def _onchange_qr_code_method(self):
         for record in self:
-            # Only auto-populate image for PayWay QR methods
+            # Only auto-populate image/name for PayWay QR methods
             if record.qr_code_method not in const.PAYMENT_METHODS_CODES:
                 continue
             
+            if not record.name:
+                method_name = const.QR_METHOD_NAME_MAP.get(record.qr_code_method)
+                if method_name:
+                    record.name = method_name
+
             image_filename = const.QR_METHOD_IMAGE_MAP.get(record.qr_code_method)
             if image_filename:
                 image_path = get_module_resource(
