@@ -9,7 +9,7 @@
             <group name="provider_credentials" position="inside">
                 <group invisible="code != 'aba_payway'" name="payway_credentials">
                     <group colspan="2">
-                        <field name="payway_environment" required="code == 'aba_payway' and state != 'disabled'"/>
+                        <field name="payway_environment" required="code == 'aba_payway' and state != 'disabled'" placeholder="Select Environment"/>
                     </group> 
                     
                     <group invisible="payway_environment != 'production'" colspan="2" string="Production Credentials">
