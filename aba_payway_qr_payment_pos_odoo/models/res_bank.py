@@ -191,6 +191,29 @@ class ResBank(models.Model):
 
         return super()._get_qr_vals(qr_method, amount, currency, debtor_partner, free_communication, structured_communication)
 
+    def _get_qr_code_base64(self, qr_method, amount, currency, debtor_partner, free_communication, structured_communication):
+        qr_type = self._context.get('qr_type')
+        
+        if qr_method == const.PAYMENT_METHODS_MAPPING['abapay_khqr'] and qr_type == const.POS_ORDER_QR_TYPE['bill']:
+            # Return base64 qr directly for abapay_khqr on bill
+            return self._get_qr_code_generation_params(
+                qr_method,
+                amount,
+                currency,
+                debtor_partner,
+                free_communication,
+                structured_communication,
+            )
+
+        return super()._get_qr_code_base64(
+            qr_method,
+            amount,
+            currency,
+            debtor_partner,
+            free_communication,
+            structured_communication,
+        )
+
     def _get_qr_code_generation_params(
         self,
         qr_method,
@@ -220,12 +243,17 @@ class ResBank(models.Model):
                 # Payway return error
                 raise ValidationError(self._payway_construct_error_message(response))
 
-            return {
-                'barcode_type': 'QR',
-                'width': 150,
-                'height': 150,
-                'value': response['qrString'],
-            }
+            qr_type = self._context.get('qr_type')
+            if qr_method == const.PAYMENT_METHODS_MAPPING['abapay_khqr'] and qr_type == const.POS_ORDER_QR_TYPE['bill']:
+                return response['qrImage']
+            
+            else:
+                return {
+                    'barcode_type': 'QR',
+                    'width': 150,
+                    'height': 150,
+                    'value': response['qrString'],
+                }
 
         return super()._get_qr_code_generation_params(
             qr_method,
