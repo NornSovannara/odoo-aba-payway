@@ -51,6 +51,11 @@ patch(PosStore.prototype, {
 
     _paywayCreateTxnId(payment) {
 
+        if (payment.transaction_id) {
+            // Prevent regenerating transaction_id if it already exists (e.g. when retrying payment after failure)
+            return payment.transaction_id;
+        }
+
         // Get timstamp in seconds for suffix
         const timestamp = Math.floor(Date.now() / 1000);
         const suffix = this._toBase62(timestamp);
