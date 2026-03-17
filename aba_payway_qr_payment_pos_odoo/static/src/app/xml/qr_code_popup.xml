@@ -2,6 +2,12 @@
 <templates id="template" xml:space="preserve">
     <t t-inherit="point_of_sale.QRConfirmationDialog" t-inherit-mode="extension">
         
+        <xpath expr="//p[@t-out='props.body']" position="attributes">
+            <attribute name="t-att-class">
+                paywayQRState.qrCodeMethod == 'abapay_khqr' || paywayQRState.qrCodeMethod == 'wechat' || paywayQRState.qrCodeMethod == 'alipay' ? 'visually-hidden' : ''
+            </attribute>
+        </xpath>
+
         <xpath expr="//div[@class='mt-1']" position="after">
             <t t-if="
                 paywayQRState.qrCodeMethod === 'abapay_khqr' 
