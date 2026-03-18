@@ -239,7 +239,7 @@ class ResBank(models.Model):
                 api_url, '/api/payment-gateway/v1/payments/generate-qr', payload
             )
 
-            if str(response['status']['code']) != '0':
+            if str(response['status']['code']) not in ['0', '00']:
                 # Payway return error
                 raise ValidationError(self._payway_construct_error_message(response))
 
