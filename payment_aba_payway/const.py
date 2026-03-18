@@ -81,7 +81,7 @@ PAYWAY_TRAN_ID_MAX_LENGTH = 20
 
 API_URLS = {
     'production': 'https://checkout.payway.com.kh',
-    'sandbox': 'https://checkout-sandbox.payway.com.kh',
+    'sandbox': 'https://checkout-uat.payway.com.kh',
 }
 
 REFUND_TXN_SECURE_HASH_KEYS = ['request_time', 'merchant_id', 'merchant_auth']

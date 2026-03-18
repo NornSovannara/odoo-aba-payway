@@ -16,7 +16,7 @@ PAYMENT_METHODS_MAPPING = {
 
 API_URLS = {
     'production': 'https://checkout.payway.com.kh',
-    'sandbox': 'https://checkout-sandbox.payway.com.kh',
+    'sandbox': 'https://checkout-uat.payway.com.kh',
 }
 
 QR_PAYMENT_SECURE_HASH_KEYS = [
