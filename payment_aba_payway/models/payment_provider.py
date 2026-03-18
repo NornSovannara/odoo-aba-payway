@@ -317,3 +317,27 @@ class PaymentProvider(models.Model):
         if self.code != 'aba_payway':
             return default_codes
         return const.DEFAULT_PAYMENT_METHODS_CODES
+
+
+    def _payway_construct_error_message(self, response: dict) -> str:
+        """Construct a user-friendly error message from the PayWay API response.
+
+        :param dict response: The JSON response from PayWay API.
+        :return: A formatted error string.
+        :rtype: str
+        """
+        status = response.get('status', {})
+        main_msg = status.get('message', _("An unexpected error occurred."))
+        errors = status.get('errors', {})
+
+        if not errors:
+            return main_msg
+
+        error_lines = []
+        for field, messages in errors.items():
+            # Format field name (e.g., 'tran_id' -> 'Tran id')
+            fn = field.replace('_', ' ').capitalize()
+            for msg in messages:
+                error_lines.append(f"- {fn}: {msg}")
+
+        return f"{main_msg}\n" + "\n".join(error_lines)
