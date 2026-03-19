@@ -34,11 +34,18 @@ def _make_payway_api_request(base_url: str, endpoint: str, payload: dict):
     session.mount("http://", adapter)
 
     try:
+        _logger.info(
+            "Making PayWay API request to %s with payload: %s", url, payload
+        )
+
         response = session.post(
             url, json=payload, timeout=10, verify=True
         )
-        _logger.info("PayWay API request to %s with payload %s returned status code %s", url, payload, response.status_code)
         
+        _logger.info(
+            "Payway reponse returned status code %s with response: %s", 
+            response.status_code, response.text
+        )
         return response.json()
     except (requests.RequestException, ValueError) as err:
 
