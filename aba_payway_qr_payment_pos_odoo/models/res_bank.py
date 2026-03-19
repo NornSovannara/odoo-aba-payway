@@ -1,3 +1,4 @@
+import logging
 import hashlib
 import hmac
 import base64
@@ -10,6 +11,8 @@ from urllib3.util.retry import Retry
 from odoo import _, api, fields, models
 from odoo.addons.aba_payway_qr_payment_pos_odoo import const
 from odoo.exceptions import ValidationError
+
+_logger = logging.getLogger(__name__)
 
 MAX_RETRY = 2
 
@@ -34,8 +37,12 @@ def _make_payway_api_request(base_url: str, endpoint: str, payload: dict):
         response = session.post(
             url, json=payload, timeout=10, verify=True
         )
+        _logger.info("PayWay API request to %s with payload %s returned status code %s", url, payload, response.status_code)
+        
         return response.json()
     except (requests.RequestException, ValueError) as err:
+
+        _logger.error("Error while making API request to PayWay: %s", err)
         raise ValidationError(
             _("Could not establish a connection to PayWay API. Error: %s", err)
         )
