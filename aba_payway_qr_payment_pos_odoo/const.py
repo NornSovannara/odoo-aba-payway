@@ -42,6 +42,7 @@ QR_PAYMENT_SECURE_HASH_KEYS = [
 ]
 
 CHECK_TXN_SECURE_HASH_KEYS = ['req_time', 'merchant_id', 'tran_id']
+REFUND_TXN_SECURE_HASH_KEYS = ['request_time', 'merchant_id', 'merchant_auth']
 
 POS_ORDER_QR_TYPE = {
     'screen': 'screen',

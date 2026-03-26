@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import base64
+import json
 from datetime import datetime
 from urllib.parse import urljoin
 import requests
@@ -64,6 +65,11 @@ class ResBank(models.Model):
         help="Enter your production PayWay API Key. You'll receive this by email after obtaining a Go Live approval from ABA PayWay.",
         groups='base.group_system',
     )
+    production_rsa_public_key = fields.Text(
+        string='RSA Public Key',
+        help="Enter your production PayWay RSA Public Key.",
+        groups='base.group_system',
+    )
 
     sandbox_payway_merchant_id = fields.Char(
         string='Merchant ID',
@@ -72,6 +78,11 @@ class ResBank(models.Model):
     sandbox_payway_key = fields.Char(
         string='API Key',
         help='Enter your unique PayWay API Key. You can find it in the email registered for your PayWay Sandbox account.',
+        groups='base.group_system',
+    )
+    sandbox_rsa_public_key = fields.Text(
+        string='RSA Public Key',
+        help='Enter your unique PayWay RSA Public Key. You can find it in the email registered for your PayWay Sandbox account.',
         groups='base.group_system',
     )
 
@@ -148,7 +159,7 @@ class ResBank(models.Model):
             qr_type = self._context.get('qr_type')
             qr_tran_id = self._context.get('qr_tran_id') if self._context.get('qr_tran_id') else ""
 
-            api_url, merchant_id, api_key = self._payway_get_api_cred()
+            api_url, merchant_id, api_key, _ = self._payway_get_api_cred()
             self._payway_api_close_transaction(qr_tran_id)
 
             base_odoo_url:str = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
@@ -271,7 +282,7 @@ class ResBank(models.Model):
         :rtype: response dict
         """
 
-        api_url, merchant_id, api_key = self._payway_get_api_cred()
+        api_url, merchant_id, api_key, _ = self._payway_get_api_cred()
         payload = {
             'req_time': datetime.now().strftime("%Y%m%d%H%M%S"),
             'merchant_id': merchant_id,
@@ -300,7 +311,7 @@ class ResBank(models.Model):
         :return: transaction id.
         :rtype: response dict
         """
-        api_url, merchant_id, api_key = self._payway_get_api_cred()
+        api_url, merchant_id, api_key, _ = self._payway_get_api_cred()
         payload = {
             'req_time': datetime.now().strftime("%Y%m%d%H%M%S"),
             'merchant_id': merchant_id,
@@ -332,6 +343,7 @@ class ResBank(models.Model):
                 api_url,
                 self.production_payway_merchant_id,
                 self.production_payway_key,
+                self.production_rsa_public_key,
             )
         elif self.payway_environment == 'sandbox':
             api_url = const.API_URLS['sandbox']
@@ -339,7 +351,59 @@ class ResBank(models.Model):
                 api_url,
                 self.sandbox_payway_merchant_id,
                 self.sandbox_payway_key,
+                self.sandbox_rsa_public_key,
             )
+
+    def _payway_calculate_merchant_auth(self, public_key_pem: str, payload: dict):
+        try:
+            from cryptography.hazmat.primitives import serialization
+            from cryptography.hazmat.primitives.asymmetric import padding
+        except ImportError as err:
+            raise ValidationError(
+                _("The Python package 'cryptography' is required to process PayWay refunds. Error: %s", err)
+            )
+
+        public_key = serialization.load_pem_public_key(public_key_pem.encode('utf-8'))
+        data = json.dumps(payload).encode('utf-8')
+
+        encrypted = bytearray()
+        for i in range(0, len(data), 117):
+            chunk = data[i:i + 117]
+            encrypted.extend(public_key.encrypt(chunk, padding.PKCS1v15()))
+
+        return base64.b64encode(bytes(encrypted)).decode('utf-8')
+
+    def _payway_api_refund_transaction(self, qr_tran_id: str, refund_amount: float):
+        api_url, merchant_id, api_key, public_key_pem = self._payway_get_api_cred()
+        if not public_key_pem:
+            raise ValidationError(
+                _("Payway: RSA Public Key is required to process refunds in the selected environment.")
+            )
+
+        payload_merchant_auth = {
+            'mc_id': merchant_id,
+            'tran_id': qr_tran_id,
+            'refund_amount': refund_amount,
+        }
+        merchant_auth = self._payway_calculate_merchant_auth(public_key_pem, payload_merchant_auth)
+
+        payload = {
+            'request_time': datetime.now().strftime('%Y%m%d%H%M%S'),
+            'merchant_id': merchant_id,
+            'merchant_auth': merchant_auth,
+        }
+        payload.update(
+            {'hash': self._payway_calculate_payment_secure_hash(api_key, payload, const.REFUND_TXN_SECURE_HASH_KEYS)}
+        )
+
+        response = _make_payway_api_request(
+            api_url, '/api/merchant-portal/merchant-access/online-transaction/refund', payload
+        )
+
+        if str(response['status']['code']) == '00':
+            return response
+
+        raise ValidationError(self._payway_construct_error_message(response))
 
     def _payway_calculate_payment_secure_hash(self, api_key: str, payload: dict, secure_hash_keys: list):
         """Compute the secure hash for the provided data according to the PayWay documentation.
