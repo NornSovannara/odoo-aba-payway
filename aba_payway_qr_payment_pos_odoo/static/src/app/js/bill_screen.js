@@ -35,6 +35,11 @@ patch(BillScreen.prototype, {
                 return;
             }
 
+            if ((payment.amount || 0) <= 0) {
+                order.payway_qr_image = "";
+                return;
+            }
+
             if (
                 !payment.payment_method_id ||
                 payment.payment_method_id.payment_method_type != "qr_code" ||

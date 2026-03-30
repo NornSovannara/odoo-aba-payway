@@ -67,7 +67,7 @@ class PayWayController(http.Controller):
             _logger.warning("Received notification with missing signature.")
             raise Forbidden()
         
-        _, _, api_key = bank_account._payway_get_api_cred()
+        _, _, api_key, _ = bank_account._payway_get_api_cred()
         expected_signature = bank_account._payway_calculate_webhook_secure_hash(api_key, notification_data)
         if (
             expected_signature is None
