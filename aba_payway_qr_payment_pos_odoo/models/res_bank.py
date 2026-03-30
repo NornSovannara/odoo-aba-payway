@@ -13,6 +13,9 @@ from odoo import _, api, fields, models
 from odoo.addons.aba_payway_qr_payment_pos_odoo import const
 from odoo.exceptions import ValidationError
 
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import padding
+
 _logger = logging.getLogger(__name__)
 
 MAX_RETRY = 2
@@ -369,13 +372,6 @@ class ResBank(models.Model):
             )
 
     def _payway_calculate_merchant_auth(self, public_key_pem: str, payload: dict):
-        try:
-            from cryptography.hazmat.primitives import serialization
-            from cryptography.hazmat.primitives.asymmetric import padding
-        except ImportError as err:
-            raise ValidationError(
-                _("The Python package 'cryptography' is required to process PayWay refunds. Error: %s", err)
-            )
 
         public_key = serialization.load_pem_public_key(public_key_pem.encode('utf-8'))
         data = json.dumps(payload).encode('utf-8')
