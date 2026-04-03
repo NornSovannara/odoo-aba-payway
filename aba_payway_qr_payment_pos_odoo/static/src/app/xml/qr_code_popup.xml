@@ -56,14 +56,14 @@
                         <div class="payment-qr-content khqr">
                             <t t-if="paywayQRState.currency_name == 'USD'"> 
                                 <img 
-                                    t-att-src="'/aba_payway_qr_payment_pos_odoo/static/src/img/dollar.svg'" 
+                                    t-att-src="'/aba_payway_qr_payment_pos_odoo/static/src/img/bakong.svg'" 
                                     alt="Currency Logo" 
                                     class="payment-qr-ccy khqr"
                                 />
                             </t>
                             <t t-elif="paywayQRState.currency_name == 'KHR'">
                                 <img 
-                                    t-att-src="'/aba_payway_qr_payment_pos_odoo/static/src/img/riel.svg'" 
+                                    t-att-src="'/aba_payway_qr_payment_pos_odoo/static/src/img/bakong.svg'" 
                                     alt="Currency Logo" 
                                     class="payment-qr-ccy khqr"
                                 />
