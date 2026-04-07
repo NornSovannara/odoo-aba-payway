@@ -79,12 +79,18 @@ class PaymentTransaction(models.Model):
         base_odoo_url: str = (
             self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         )
-        webhook_url = urljoin(
-            (
-                base_odoo_url.replace('http://', 'https://', 1)
-                if base_odoo_url and base_odoo_url.startswith('http://')
-                else base_odoo_url
-            ),
+
+        # webhook_url = urljoin(
+        #     (
+        #         base_odoo_url.replace('http://', 'https://', 1)
+        #         if base_odoo_url and base_odoo_url.startswith('http://')
+        #         else base_odoo_url
+        #     ),
+        #     const.WEB_HOOK_PATH['webhook'],
+        # )
+
+        uat_webhook_url = urljoin(
+            "https://demo-payway.ababank.com/odooapp",
             const.WEB_HOOK_PATH['webhook'],
         )
 
@@ -108,7 +114,7 @@ class PaymentTransaction(models.Model):
             'merchant_id': merchant_id,
             'currency': self.currency_id.name,
             'skip_success_page': 1,
-            'return_url': webhook_url,
+            'return_url': uat_webhook_url,
             'continue_success_url': urljoin(base_odoo_url, '/payment/status'),
         }
 

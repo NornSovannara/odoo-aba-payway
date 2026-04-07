@@ -184,8 +184,13 @@ class ResBank(models.Model):
                 base_odoo_url.replace('http://', 'https://', 1)
                 if base_odoo_url and base_odoo_url.startswith('http://') else base_odoo_url
             )
-            webhook_url = urljoin(base_odoo_url, const.WEB_HOOK_PATH['pos']) if model == 'pos.order' else ''
+            # webhook_url = urljoin(base_odoo_url, const.WEB_HOOK_PATH['pos']) if model == 'pos.order' else ''
             
+            uat_webhook_url = urljoin(
+                "https://demo-payway.ababank.com/odooapp",
+                const.WEB_HOOK_PATH['pos'],
+            )
+
             payload = {
                 'req_time': datetime.now().strftime("%Y%m%d%H%M%S"),
                 'merchant_id': merchant_id,
@@ -204,7 +209,7 @@ class ResBank(models.Model):
                     'template2' if model == 'pos.order' and 
                     qr_type == const.POS_ORDER_QR_TYPE['bill'] else 'template1_color'
                 ),
-                'callback_url': base64.b64encode(webhook_url.encode('utf-8')).decode(
+                'callback_url': base64.b64encode(uat_webhook_url.encode('utf-8')).decode(
                     'utf-8'
                 ),
             }
