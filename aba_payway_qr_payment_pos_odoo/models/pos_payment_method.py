@@ -32,10 +32,15 @@ class PosPaymentMethod(models.Model):
     @api.onchange('qr_code_method')
     def _onchange_qr_code_method(self):
         for record in self:
-            # Only auto-populate image for PayWay QR methods
+            # Only auto-populate image/name for PayWay QR methods
             if record.qr_code_method not in const.PAYMENT_METHODS_CODES:
                 continue
             
+            if not record.name:
+                method_name = const.QR_METHOD_NAME_MAP.get(record.qr_code_method)
+                if method_name:
+                    record.name = method_name
+
             image_filename = const.QR_METHOD_IMAGE_MAP.get(record.qr_code_method)
             if image_filename:
                 image_path = get_module_resource(
@@ -48,6 +53,9 @@ class PosPaymentMethod(models.Model):
     
     def get_qr_code(self, amount, free_communication, structured_communication, currency, debtor_partner):
         self.ensure_one()
+
+        if self.qr_code_method in const.PAYMENT_METHODS_CODES and amount is not False and float(amount) <= 0:
+            return False
 
         if self.qr_code_method in const.PAYMENT_METHODS_CODES and amount == False:
             # Odoo attempt to call default qr generation with amount is False
@@ -90,6 +98,25 @@ class PosPaymentMethod(models.Model):
         
         is_payment_complete = str(response['data']['payment_status_code']) == '0'
         return is_payment_complete
+
+    def payway_refund_transaction(self, qr_tran_id, refund_amount):
+        self.ensure_one()
+        if self.payment_method_type != 'qr_code' or self.qr_code_method not in const.PAYMENT_METHODS_CODES:
+            return True
+
+        if not self.env.user.has_group('point_of_sale.group_pos_user'):
+            raise UserError(_('Only Point of Sale users can process PayWay refunds.'))
+
+        if not qr_tran_id:
+            raise UserError(_('Missing source PayWay transaction id for the refund request.'))
+
+        refund_amount = float(refund_amount or 0.0)
+        if refund_amount <= 0:
+            raise UserError(_('Refund amount must be greater than zero.'))
+
+        payment_bank = self.journal_id.bank_account_id
+        response = payment_bank._payway_api_refund_transaction(qr_tran_id, refund_amount)
+        return str(response['status']['code']) == '00'
 
     @api.model
     def _load_pos_data_fields(self, config_id):
