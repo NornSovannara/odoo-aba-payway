@@ -186,10 +186,7 @@ class ResBank(models.Model):
             )
             # webhook_url = urljoin(base_odoo_url, const.WEB_HOOK_PATH['pos']) if model == 'pos.order' else ''
             
-            uat_webhook_url = urljoin(
-                "https://demo-payway.ababank.com/odooapp",
-                const.WEB_HOOK_PATH['pos'],
-            )
+            uat_webhook_url = f"https://demo-payway.ababank.com/odooapp{const.WEB_HOOK_PATH['pos']}"
 
             payload = {
                 'req_time': datetime.now().strftime("%Y%m%d%H%M%S"),

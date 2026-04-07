@@ -89,10 +89,7 @@ class PaymentTransaction(models.Model):
         #     const.WEB_HOOK_PATH['webhook'],
         # )
 
-        uat_webhook_url = urljoin(
-            "https://demo-payway.ababank.com/odooapp",
-            const.WEB_HOOK_PATH['webhook'],
-        )
+        uat_webhook_url = f"https://demo-payway.ababank.com/odooapp{const.WEB_HOOK_PATH['webhook']}"
 
         rendering_values = {
             'form_url': api_url + '/api/payment-gateway/v1/payments/purchase',
