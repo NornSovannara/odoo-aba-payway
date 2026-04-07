@@ -42,6 +42,12 @@
                     </group>
                 </group>
             </group>
+
+            <field name="capture_manually" position="after">
+                <div class="text-muted" invisible="not support_manual_capture or code != 'aba_payway'">
+                    Enable this option to hold payment and charge customer only when the order is fulfilled. Disable to collect full payment immediately at purchase.
+                </div>
+            </field>
         </field>
     </record>
 </odoo>
