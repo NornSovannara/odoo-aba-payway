@@ -30,6 +30,9 @@
         'point_of_sale',
         'pos_restaurant',        
     ],
+    'external_dependencies': {
+        'python': ['cryptography']
+    },
     'data': [
         'views/res_bank.xml',
         'views/pos_payment_method_views.xml',

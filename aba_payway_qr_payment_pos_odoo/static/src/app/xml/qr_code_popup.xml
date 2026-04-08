@@ -2,6 +2,12 @@
 <templates id="template" xml:space="preserve">
     <t t-inherit="point_of_sale.QRConfirmationDialog" t-inherit-mode="extension">
         
+        <xpath expr="//p[@t-out='props.body']" position="attributes">
+            <attribute name="t-att-class">
+                paywayQRState.qrCodeMethod == 'abapay_khqr' || paywayQRState.qrCodeMethod == 'wechat' || paywayQRState.qrCodeMethod == 'alipay' ? 'visually-hidden' : ''
+            </attribute>
+        </xpath>
+
         <xpath expr="//div[@class='mt-1']" position="after">
             <t t-if="
                 paywayQRState.qrCodeMethod === 'abapay_khqr' 
@@ -50,14 +56,14 @@
                         <div class="payment-qr-content khqr">
                             <t t-if="paywayQRState.currency_name == 'USD'"> 
                                 <img 
-                                    t-att-src="'/aba_payway_qr_payment_pos_odoo/static/src/img/dollar.svg'" 
+                                    t-att-src="'/aba_payway_qr_payment_pos_odoo/static/src/img/bakong.svg'" 
                                     alt="Currency Logo" 
                                     class="payment-qr-ccy khqr"
                                 />
                             </t>
                             <t t-elif="paywayQRState.currency_name == 'KHR'">
                                 <img 
-                                    t-att-src="'/aba_payway_qr_payment_pos_odoo/static/src/img/riel.svg'" 
+                                    t-att-src="'/aba_payway_qr_payment_pos_odoo/static/src/img/bakong.svg'" 
                                     alt="Currency Logo" 
                                     class="payment-qr-ccy khqr"
                                 />

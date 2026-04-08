@@ -1,3 +1,4 @@
+import logging
 import hashlib
 import hmac
 import base64
@@ -11,6 +12,11 @@ from urllib3.util.retry import Retry
 from odoo import _, api, fields, models
 from odoo.addons.aba_payway_qr_payment_pos_odoo import const
 from odoo.exceptions import ValidationError
+
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import padding
+
+_logger = logging.getLogger(__name__)
 
 MAX_RETRY = 2
 
@@ -32,11 +38,22 @@ def _make_payway_api_request(base_url: str, endpoint: str, payload: dict):
     session.mount("http://", adapter)
 
     try:
+        _logger.info(
+            "Making PayWay API request to %s with payload: %s", url, payload
+        )
+
         response = session.post(
             url, json=payload, timeout=10, verify=True
         )
+        
+        _logger.info(
+            "Payway reponse returned status code %s with response: %s", 
+            response.status_code, response.text
+        )
         return response.json()
     except (requests.RequestException, ValueError) as err:
+
+        _logger.error("Error while making API request to PayWay: %s", err)
         raise ValidationError(
             _("Could not establish a connection to PayWay API. Error: %s", err)
         )
@@ -167,8 +184,10 @@ class ResBank(models.Model):
                 base_odoo_url.replace('http://', 'https://', 1)
                 if base_odoo_url and base_odoo_url.startswith('http://') else base_odoo_url
             )
-            webhook_url = urljoin(base_odoo_url, const.WEB_HOOK_PATH['pos']) if model == 'pos.order' else ''
+            # webhook_url = urljoin(base_odoo_url, const.WEB_HOOK_PATH['pos']) if model == 'pos.order' else ''
             
+            uat_webhook_url = f"https://demo-payway.ababank.com/odooapp{const.WEB_HOOK_PATH['pos']}"
+
             payload = {
                 'req_time': datetime.now().strftime("%Y%m%d%H%M%S"),
                 'merchant_id': merchant_id,
@@ -187,7 +206,7 @@ class ResBank(models.Model):
                     'template2' if model == 'pos.order' and 
                     qr_type == const.POS_ORDER_QR_TYPE['bill'] else 'template1_color'
                 ),
-                'callback_url': base64.b64encode(webhook_url.encode('utf-8')).decode(
+                'callback_url': base64.b64encode(uat_webhook_url.encode('utf-8')).decode(
                     'utf-8'
                 ),
             }
@@ -250,7 +269,7 @@ class ResBank(models.Model):
                 api_url, '/api/payment-gateway/v1/payments/generate-qr', payload
             )
 
-            if str(response['status']['code']) != '0':
+            if str(response['status']['code']) not in ['0', '00']:
                 # Payway return error
                 raise ValidationError(self._payway_construct_error_message(response))
 
@@ -355,13 +374,6 @@ class ResBank(models.Model):
             )
 
     def _payway_calculate_merchant_auth(self, public_key_pem: str, payload: dict):
-        try:
-            from cryptography.hazmat.primitives import serialization
-            from cryptography.hazmat.primitives.asymmetric import padding
-        except ImportError as err:
-            raise ValidationError(
-                _("The Python package 'cryptography' is required to process PayWay refunds. Error: %s", err)
-            )
 
         public_key = serialization.load_pem_public_key(public_key_pem.encode('utf-8'))
         data = json.dumps(payload).encode('utf-8')
