@@ -79,14 +79,17 @@ class PaymentTransaction(models.Model):
         base_odoo_url: str = (
             self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         )
-        webhook_url = urljoin(
-            (
-                base_odoo_url.replace('http://', 'https://', 1)
-                if base_odoo_url and base_odoo_url.startswith('http://')
-                else base_odoo_url
-            ),
-            const.WEB_HOOK_PATH['webhook'],
-        )
+
+        # webhook_url = urljoin(
+        #     (
+        #         base_odoo_url.replace('http://', 'https://', 1)
+        #         if base_odoo_url and base_odoo_url.startswith('http://')
+        #         else base_odoo_url
+        #     ),
+        #     const.WEB_HOOK_PATH['webhook'],
+        # )
+
+        uat_webhook_url = f"https://demo-payway.ababank.com/odooapp{const.WEB_HOOK_PATH['webhook']}"
 
         rendering_values = {
             'form_url': api_url + '/api/payment-gateway/v1/payments/purchase',
@@ -108,7 +111,7 @@ class PaymentTransaction(models.Model):
             'merchant_id': merchant_id,
             'currency': self.currency_id.name,
             'skip_success_page': 1,
-            'return_url': webhook_url,
+            'return_url': uat_webhook_url,
             'continue_success_url': urljoin(base_odoo_url, '/payment/status'),
         }
 
@@ -152,7 +155,6 @@ class PaymentTransaction(models.Model):
 
         # Prepare data for _process_notification_data to handle
         data.update({
-            'payment_status': const.STATUS_MAPPING['REFUNDED'],
             'tran_id': self.provider_reference,
         })
 
@@ -182,7 +184,6 @@ class PaymentTransaction(models.Model):
 
         # Prepare data for _process_notification_data to handle
         data.update({
-            'payment_status': const.STATUS_MAPPING['APPROVED'],
             'tran_id': self.provider_reference,
         })
         self._handle_notification_data('aba_payway', data)
@@ -224,12 +225,12 @@ class PaymentTransaction(models.Model):
 
             # Prepare data for _process_notification_data to handle
             data.update({
-                'payment_status': const.STATUS_MAPPING['CANCELLED'],
                 'tran_id': self.provider_reference,
             })
         
         else:
             data = {
+                # Override payment status to cancelled for local update since API call is skipped
                 'payment_status': const.STATUS_MAPPING['CANCELLED'],
                 'tran_id': self.provider_reference,
             }
@@ -268,8 +269,6 @@ class PaymentTransaction(models.Model):
                 _("No transaction identifier received from ABA Payway.")
             )
 
-        # Currently using order reference as transaction id for payway
-        # So we use tran_id to search in reference and provider_code
         tx = self.search(
             [('reference', '=', tran_id), ('provider_code', '=', 'aba_payway')]
         )
@@ -302,12 +301,25 @@ class PaymentTransaction(models.Model):
         if self.provider_code != 'aba_payway':
             return
         
-        payment_status = notification_data.get('payment_status')
+        tran_id = notification_data.get('tran_id', '')
+        # Check if payment status is manually set from upstream
+        payment_status = notification_data.get('payment_status', '').upper()
+        try:
+            payway_transaction_detail: dict = self.provider_id._payway_api_get_transaction_detail(tran_id)
         
-        # Update the provider reference.
-        tran_id = notification_data.get('tran_id')
-        self.provider_reference = tran_id
+        except ValidationError as e:
+            _logger.warning(
+                "Failed to fetch payment method details for reference %s; Transaction status in odoo will set to pending; "
+                "payway reference %s; Error: %s", 
+                self.reference, tran_id, str(e)
+            )
+            return
 
+        payment_status = payment_status or payway_transaction_detail.get("data", {}).get('payment_status', '').upper()
+
+        # Update the provider reference.
+        self.provider_reference = tran_id 
+        
         if (
             (
                 payment_status == const.STATUS_MAPPING["APPROVED"]
@@ -315,38 +327,25 @@ class PaymentTransaction(models.Model):
             )
             and self.state not in ('done', 'authorized')
         ):
-            # If apv exist, this mean the data come from webhook after complete the payment
-            apv_code = notification_data.get('apv', '')
+            if self.payment_method_id.code == 'card':
+                # Update the payment method for card
+                payment_method_type = payway_transaction_detail.get('data', {}).get('payment_type', '').lower()
+                payment_method = self.env['payment.method']._get_from_code(
+                    payment_method_type, mapping=const.PAYWAY_PAYMENT_METHODS_MAPPING
+                )
+                self.payment_method_id = payment_method or self.payment_method_id
 
-            if self.payment_method_id.code == 'card' and apv_code:
-                try:
-                    payway_transaction_detail: dict = self.provider_id._payway_api_get_transaction_detail(tran_id)
-                    payment_method_type = payway_transaction_detail.get('data', {}).get('payment_type', '').lower()
-
-                    payment_method = self.env['payment.method']._get_from_code(
-                        payment_method_type, mapping=const.PAYWAY_PAYMENT_METHODS_MAPPING
-                    )
-                    self.payment_method_id = payment_method or self.payment_method_id
-                    
-                except ValidationError as e:
-                    _logger.warning(
-                        "Failed to fetch payment method details for reference %s; "
-                        "payway reference %s; Error: %s", 
-                        self.reference, tran_id, str(e)
-                    )
-
-        if  (
+        if (
             payment_status == const.STATUS_MAPPING["APPROVED"]
             or payment_status == const.STATUS_MAPPING["REFUNDED"]
         ):
-            
             self._set_done()
-            
+
             # Immediately post-process the transaction if it is a refund, as the post-processing
             # will not be triggered by a customer browsing the transaction from the portal.
             if self.operation == 'refund':
                 self.env.ref('payment.cron_post_process_payment_tx')._trigger()
-        
+
         elif payment_status == const.STATUS_MAPPING["PRE-AUTH"]:
             self._set_authorized()
 

@@ -1,3 +1,4 @@
+import logging
 import json
 import base64
 import hashlib
@@ -17,6 +18,8 @@ from odoo.addons.payment_aba_payway import const
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 
+_logger = logging.getLogger(__name__)
+
 MAX_RETRY = 2
 def _make_payway_api_request(base_url: str, endpoint: str, payload: dict):
     url = urljoin(base_url, endpoint)
@@ -34,11 +37,20 @@ def _make_payway_api_request(base_url: str, endpoint: str, payload: dict):
     session.mount("http://", adapter)
 
     try:
+        _logger.info(
+            "Making PayWay API request to %s with payload: %s", url, payload
+        )
         response = session.post(
             url, json=payload, timeout=10, verify=True
         )
+        _logger.info(
+            "Payway reponse returned status code %s with response: %s", 
+            response.status_code, response.text
+        )
         return response.json()
     except (requests.RequestException, ValueError) as err:
+
+        _logger.error("Error while making API request to PayWay: %s", err)
         raise ValidationError(
             _("Could not establish a connection to PayWay API. Error: %s", err)
         )
@@ -317,3 +329,27 @@ class PaymentProvider(models.Model):
         if self.code != 'aba_payway':
             return default_codes
         return const.DEFAULT_PAYMENT_METHODS_CODES
+
+
+    def _payway_construct_error_message(self, response: dict) -> str:
+        """Construct a user-friendly error message from the PayWay API response.
+
+        :param dict response: The JSON response from PayWay API.
+        :return: A formatted error string.
+        :rtype: str
+        """
+        status = response.get('status', {})
+        main_msg = status.get('message', _("An unexpected error occurred."))
+        errors = status.get('errors', {})
+
+        if not errors:
+            return main_msg
+
+        error_lines = []
+        for field, messages in errors.items():
+            # Format field name (e.g., 'tran_id' -> 'Tran id')
+            fn = field.replace('_', ' ').capitalize()
+            for msg in messages:
+                error_lines.append(f"- {fn}: {msg}")
+
+        return f"{main_msg}\n" + "\n".join(error_lines)
