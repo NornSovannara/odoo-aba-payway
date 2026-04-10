@@ -114,9 +114,10 @@ patch(PaymentScreen.prototype, {
             }
             return line.handle_payment_response(isRefundComplete);
         } catch (error) {
+            const errorMessage = error?.data?.message ?? error?.message ?? "Failed to process PayWay refund";
             this.dialog.add(AlertDialog, {
                 title: _t("Refund Failed"),
-                body: error?.message || _t("Failed to process PayWay refund."),
+                body: _t(errorMessage),
             });
             return line.handle_payment_response(false);
         }
