@@ -35,7 +35,6 @@ def _make_payway_api_request(base_url: str, endpoint: str, payload: dict):
     adapter = HTTPAdapter(max_retries=retry_strategy)
     session = requests.Session()
     session.mount("https://", adapter)
-    session.mount("http://", adapter)
 
     try:
         _logger.info(
@@ -177,7 +176,9 @@ class ResBank(models.Model):
             qr_tran_id = self._context.get('qr_tran_id') if self._context.get('qr_tran_id') else ""
 
             api_url, merchant_id, api_key, _ = self._payway_get_api_cred()
-            self._payway_api_close_transaction(qr_tran_id)
+            
+            # Now close trnx is call when user remove payment trnx on frontend
+            # self._payway_api_close_transaction(qr_tran_id)
 
             base_odoo_url:str = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
             base_odoo_url = (
