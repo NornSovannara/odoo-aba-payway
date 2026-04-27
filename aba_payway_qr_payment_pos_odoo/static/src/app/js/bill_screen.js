@@ -51,10 +51,16 @@ patch(BillScreen.prototype, {
             }
 
             payment.transaction_id = this.pos._paywayCreateTxnId(payment);
+            const items = order.lines.map(line => ({
+                name: line.full_product_name,
+                quantity: line.qty,
+                price: line.price_unit,
+            }));
             user.updateContext({
                 model: MODEL,
                 qr_type: POS_ORDER_QR_TYPE["bill"],
                 qr_tran_id: payment.transaction_id,
+                items: items,
             });
 
             const qr = await this.orm.call("pos.payment.method", "get_qr_code", [

@@ -7,11 +7,18 @@ import { PAYWAY_QR_CODE_METHOD, MODEL, POS_ORDER_QR_TYPE, BASE62, PAYWAY_TRAN_ID
 patch(PosStore.prototype, {
 
     async showQR(payment) {
+        const order = this.get_order();
+        const items = order.lines.map(line => ({
+            name: line.full_product_name,
+            quantity: line.qty,
+            price: line.price_unit,
+        }));
 
         user.updateContext({
             model: MODEL,
             qr_type: POS_ORDER_QR_TYPE["screen"],
             qr_tran_id: payment.transaction_id,
+            items: items,
         });
 
         return await super.showQR(payment);
