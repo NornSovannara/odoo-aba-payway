@@ -302,8 +302,10 @@ class PaymentTransaction(models.Model):
             return
         
         tran_id = notification_data.get('tran_id', '')
+        is_from_webhook = self.env.context.get('payway_from_webhook', False)
+
         # Check if payment status is manually set from upstream
-        payment_status = notification_data.get('payment_status', '').upper()
+        upstream_payment_status = notification_data.get('payment_status', '').upper()
         try:
             payway_transaction_detail: dict = self.provider_id._payway_api_get_transaction_detail(tran_id)
         
@@ -315,10 +317,15 @@ class PaymentTransaction(models.Model):
             )
             return
 
+        api_payment_status = payway_transaction_detail.get('data', {}).get('payment_status', '').upper()
         payment_status = (
-            payment_status
-            if payment_status == const.STATUS_MAPPING["CANCELLED"]
-            else payway_transaction_detail.get("data", {}).get("payment_status", "").upper()
+            api_payment_status
+            if is_from_webhook
+            else (
+                upstream_payment_status
+                if upstream_payment_status and upstream_payment_status == const.STATUS_MAPPING['CANCELLED']
+                else api_payment_status
+            )
         )
 
         # Update the provider reference.
