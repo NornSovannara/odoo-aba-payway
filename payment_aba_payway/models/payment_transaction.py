@@ -315,7 +315,11 @@ class PaymentTransaction(models.Model):
             )
             return
 
-        payment_status = payment_status or payway_transaction_detail.get("data", {}).get('payment_status', '').upper()
+        payment_status = (
+            payment_status
+            if payment_status == const.STATUS_MAPPING["CANCELLED"]
+            else payway_transaction_detail.get("data", {}).get("payment_status", "").upper()
+        )
 
         # Update the provider reference.
         self.provider_reference = tran_id 
