@@ -1,9 +1,14 @@
 import base64
+import logging
 
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
 from odoo import _, models, fields, api
 from odoo.modules.module import get_module_resource
+from odoo.tools import float_compare
 from odoo.addons.aba_payway_qr_payment_pos_odoo import const
+
+
+_logger = logging.getLogger(__name__)
 
 
 class PosPaymentMethod(models.Model):
@@ -69,6 +74,11 @@ class PosPaymentMethod(models.Model):
             if qr_type == "bill" and (self.qr_code_method == const.PAYMENT_METHODS_MAPPING['abapay_khqr'] and not self.allow_qr_on_bill):
                 return False
 
+        if self.qr_code_method in const.PAYMENT_METHODS_CODES:
+            # Pre-Validate amount and currency against server-side order data.
+            # Raises if values don't match, blocking requests with tampered parameters.
+            self._payway_validate_qr_params(amount, currency, free_communication)
+
         return super().get_qr_code(
             amount,
             free_communication,
@@ -76,6 +86,129 @@ class PosPaymentMethod(models.Model):
             currency,
             debtor_partner,
         )
+
+    def _payway_validate_qr_params(self, amount, currency_id, free_communication):
+        """Pre-validate amount and currency before calling the PayWay API.
+        """
+        self.ensure_one()
+
+        order = self._payway_get_order_by_reference(free_communication)
+        if not order:
+            raise UserError(_(
+                "PayWay: Unable to validate order data on the server. "
+                "Please sync and retry the payment."
+            ))
+
+        # === Currency check ===
+        order_currency = order.currency_id
+        client_currency = self.env['res.currency'].browse(currency_id)
+        if not client_currency or client_currency.id != order_currency.id:
+            _logger.warning(
+                "PayWay QR: currency mismatch for order '%s' — client sent '%s', order is '%s'.",
+                order.pos_reference,
+                client_currency.name if client_currency else 'N/A',
+                order_currency.name,
+            )
+            raise UserError(_(
+                "PayWay: The payment currency (%(client_currency)s) does not match "
+                "the order currency (%(order_currency)s). Please retry the payment.",
+                client_currency=client_currency.name if client_currency else 'N/A',
+                order_currency=order_currency.name,
+            ))
+
+        currency_name = (order_currency.name or '').upper()
+        currency_precision = const.CURRENCY_DECIMALS.get(currency_name)
+        precision_kwargs = (
+            {'precision_digits': currency_precision}
+            if currency_precision is not None
+            else {'precision_rounding': order_currency.rounding}
+        )
+
+        # === Check 1: sum of all payment lines must cover Odoo-recomputed total ===
+        # _compute_prices() uses Odoo's own tax engine on stored order lines,
+        # handling discounts, loyalty rewards, and promotions correctly.
+        # This detects tampering of both payment lines and QR amount.
+        order._compute_prices()
+        odoo_total = order.amount_total
+        total_payments = sum(order.payment_ids.filtered(lambda p: p.amount > 0).mapped('amount'))
+        if float_compare(total_payments, odoo_total, **precision_kwargs) < 0:
+            _logger.warning(
+                "PayWay QR: payment total mismatch for order '%s' — "
+                "payment lines sum %s is less than Odoo-recomputed total %s.",
+                order.pos_reference, total_payments, odoo_total,
+            )
+            raise UserError(_(
+                "PayWay: The total payment amount (%(total_payments)s) does not cover "
+                "the order total (%(odoo_total)s). Please retry the payment.",
+                total_payments=total_payments,
+                odoo_total=odoo_total,
+            ))
+
+        # === Check 2: QR amount must match the specific PayWay payment line ===
+        # Catches attackers who tamper only the QR request without touching sync.
+        # Also verifies the matched payment line belongs to a PayWay method —
+        # qr_code_method is a server-stored field and cannot be forged via sync.
+        client_amount = float(amount)
+        qr_tran_id = self._context.get('qr_tran_id')
+        payway_payment = order.payment_ids.filtered(
+            lambda p: p.amount > 0
+            and p.payment_method_id.id == self.id
+            and p.payment_method_id.qr_code_method in const.PAYMENT_METHODS_CODES
+            and (not qr_tran_id or p.transaction_id == qr_tran_id)
+        )
+        if not payway_payment:
+            raise UserError(_(
+                "PayWay: Unable to locate the PayWay payment line for this order. "
+                "Please retry the payment."
+            ))
+
+        expected_amount = payway_payment[-1].amount
+        if float_compare(client_amount, expected_amount, **precision_kwargs) != 0:
+            _logger.warning(
+                "PayWay QR: amount mismatch for order '%s' — client sent %s, payment line has %s.",
+                order.pos_reference, client_amount, expected_amount,
+            )
+            raise UserError(_(
+                "PayWay: The payment amount (%(client_amount)s) does not match "
+                "the expected amount (%(server_amount)s). Please retry the payment.",
+                client_amount=client_amount,
+                server_amount=expected_amount,
+            ))
+
+    def _payway_get_order_by_reference(self, free_communication):
+        """Look up a draft POS order from trusted context, then fallback to free_communication.
+
+        free_communication format: "{name} {tracking_number}"
+        Returns the pos.order record or empty recordset if not found.
+        """
+        order_uid = self._context.get('order_uid')
+        if order_uid:
+            order = self.env['pos.order'].sudo().search([
+                ('uuid', '=', order_uid),
+                ('state', '=', 'draft'),
+            ], limit=1)
+            if order:
+                return order
+
+        if not free_communication:
+            return self.env['pos.order']
+
+        # Split on last space: order name is everything except the last token (tracking_number)
+        parts = free_communication.strip().rsplit(' ', 1)
+        if len(parts) != 2:
+            return self.env['pos.order']
+
+        order_name = parts[0].strip()
+        tracking_number = parts[1].strip()
+        if not order_name:
+            return self.env['pos.order']
+
+        domain = [('name', '=', order_name), ('state', '=', 'draft')]
+        try:
+            domain.append(('tracking_number', '=', int(tracking_number)))
+        except (TypeError, ValueError):
+            pass
+        return self.env['pos.order'].sudo().search(domain, limit=1)
 
     def payway_cancel_transaction(self, qr_tran_id):
         """Call res.partner.bank close payway transaction method"""
@@ -87,11 +220,13 @@ class PosPaymentMethod(models.Model):
         payment_bank = self.journal_id.bank_account_id
         payment_bank._payway_api_close_transaction(qr_tran_id)
 
-    def payway_verify_transaction(self, qr_tran_id):
-        
+    def payway_verify_transaction(
+        self,
+        qr_tran_id,
+    ):
         self.ensure_one()
         if self.payment_method_type != 'qr_code' or not self.qr_code_method in const.PAYMENT_METHODS_CODES:
-            return True        
+            return True
 
         payment_bank = self.journal_id.bank_account_id
         response = payment_bank._payway_api_check_transaction(qr_tran_id)

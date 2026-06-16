@@ -19,6 +19,16 @@ API_URLS = {
     'sandbox': 'https://checkout-sandbox.payway.com.kh',
 }
 
+SUPPORTED_CURRENCIES = {
+    'KHR',
+    'USD',
+}
+
+CURRENCY_DECIMALS = {
+    'KHR': 0,
+    'USD': 2,
+}
+
 QR_PAYMENT_SECURE_HASH_KEYS = [
     'req_time',
     'merchant_id',

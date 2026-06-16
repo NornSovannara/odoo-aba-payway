@@ -370,6 +370,7 @@ class ResBank(models.Model):
 
         raise ValidationError(self._payway_construct_error_message(response))
 
+
     def _payway_get_api_cred(self):
         """Return the URL of the API corresponding to the selected payway environment.
 

@@ -2,6 +2,7 @@ import logging
 
 from odoo import _, models
 from odoo.exceptions import UserError, ValidationError
+from odoo.tools import float_compare
 
 from odoo.addons.aba_payway_qr_payment_pos_odoo import const
 
@@ -23,12 +24,12 @@ class PosOrder(models.Model):
         return super()._process_saved_order(draft)
 
     def _payway_verify_qr_payments_before_finalize(self):
-        """Call PayWay API directly to verify each QR payment line.
-
+        """
         Raises ValidationError if any PayWay transaction is not confirmed as
         paid, blocking order finalization and rolling back the sync transaction.
         """
         self.ensure_one()
+        
         payway_payments = self.payment_ids.filtered(
             lambda p: p.amount > 0
             and p.transaction_id

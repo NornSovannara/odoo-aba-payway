@@ -1,6 +1,7 @@
 import { PosStore } from "@point_of_sale/app/store/pos_store";
 import { patch } from "@web/core/utils/patch";
 import { user } from "@web/core/user";
+import { _t } from "@web/core/l10n/translation";
 
 import { PAYWAY_QR_CODE_METHOD, MODEL, POS_ORDER_QR_TYPE, BASE62, PAYWAY_TRAN_ID_MAX_LENGTH } from "./const";
 
@@ -8,18 +9,32 @@ patch(PosStore.prototype, {
 
     async showQR(payment) {
         const order = this.get_order();
-        const items = order.lines.map(line => ({
-            name: line.full_product_name,
-            quantity: line.qty,
-            price: line.price_unit,
-        }));
 
-        user.updateContext({
-            model: MODEL,
-            qr_type: POS_ORDER_QR_TYPE["screen"],
-            qr_tran_id: payment.transaction_id,
-            items: items,
-        });
+        if (PAYWAY_QR_CODE_METHOD.includes(payment.payment_method_id.qr_code_method)) {
+            // Sync order to server before QR generation to enable server-side validation
+            // of amount and currency, preventing tampering at the RPC call level.
+            // Only done for PayWay methods — other providers are not affected.
+            try {
+                await this.syncAllOrders({ orders: [order] });
+            } catch (error) {
+                console.warn("PayWay: order sync before QR generation failed.", error);
+                throw new Error(_t("PayWay: Unable to sync order before generating QR. Please check your connection and retry."));
+            }
+
+            const items = order.lines.map(line => ({
+                name: line.full_product_name,
+                quantity: line.qty,
+                price: line.price_unit,
+            }));
+
+            user.updateContext({
+                model: MODEL,
+                qr_type: POS_ORDER_QR_TYPE["screen"],
+                qr_tran_id: payment.transaction_id,
+                order_uid: order.uuid,
+                items: items,
+            });
+        }
 
         return await super.showQR(payment);
     },
