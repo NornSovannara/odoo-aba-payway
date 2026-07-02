@@ -3,12 +3,14 @@ import { BillScreen } from "@pos_restaurant/app/bill_screen/bill_screen";
 import { useService } from "@web/core/utils/hooks";
 import { user } from "@web/core/user";
 import { onWillStart } from "@odoo/owl";
+import { _t } from "@web/core/l10n/translation";
 import { MODEL, POS_ORDER_QR_TYPE, PAYMENT_METHODS_MAPPING } from "./const";
 
 patch(BillScreen.prototype, {
     setup() {
         super.setup(...arguments);
         this.orm = useService("orm");
+        this.notification = useService("notification");
 
         onWillStart(async () => {
             await this._generateQrCode();
@@ -16,7 +18,7 @@ patch(BillScreen.prototype, {
     },
 
     async _generateQrCode() {
-        /** 
+        /**
          * Generate Payway QR code for the printed bill in POS resturant.
          */
 
@@ -51,10 +53,27 @@ patch(BillScreen.prototype, {
             }
 
             payment.transaction_id = this.pos._paywayCreateTxnId(payment);
+
+            // Sync order to server before QR generation to enable server-side validation
+            // of amount and currency, preventing tampering at the RPC call level.
+            try {
+                await this.pos.syncAllOrders({ orders: [order] });
+            } catch (error) {
+                console.warn("PayWay: order sync before QR generation failed.", error);
+                throw error;
+            }
+
+            const items = order.lines.map(line => ({
+                name: line.full_product_name,
+                quantity: line.qty,
+                price: line.price_unit,
+            }));
             user.updateContext({
                 model: MODEL,
                 qr_type: POS_ORDER_QR_TYPE["bill"],
                 qr_tran_id: payment.transaction_id,
+                order_uid: order.uuid,
+                items: items,
             });
 
             const qr = await this.orm.call("pos.payment.method", "get_qr_code", [
@@ -70,6 +89,10 @@ patch(BillScreen.prototype, {
 
         } catch (error) {
             order.payway_qr_image = "";
+            this.notification.add(
+                error?.message || _t("PayWay QR generation failed. Please check connection and retry."),
+                { type: "danger" }
+            );
         }
     }
 })

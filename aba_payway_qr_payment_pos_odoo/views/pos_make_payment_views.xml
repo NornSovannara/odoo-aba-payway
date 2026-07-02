@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_pos_make_payment_payway_warning" model="ir.ui.view">
+        <field name="name">pos.make.payment.payway.warning</field>
+        <field name="model">pos.make.payment</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_payment"/>
+        <field name="arch" type="xml">
+            <xpath expr="//footer" position="before">
+                <div class="alert alert-warning mb-0 mt-2" role="alert"
+                     invisible="not is_payway_refund">
+                    <strong>PayWay Refund Notice</strong><br/>
+                    Proceeding will automatically trigger a refund transaction
+                    on PayWay.
+                </div>
+                <field name="is_payway_refund" invisible="1"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

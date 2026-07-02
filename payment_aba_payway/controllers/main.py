@@ -31,7 +31,7 @@ class PayWayController(http.Controller):
             received_signature = request.httprequest.headers.get('x-payway-hmac-sha512')
             self._verify_notification_signature(data, received_signature, tx_sudo)
 
-            tx_sudo._handle_notification_data('aba_payway', data)
+            tx_sudo.with_context(payway_from_webhook=True)._handle_notification_data('aba_payway', data)
 
         except ValidationError:
             _logger.exception("Unable to handle the notification data; skipping to acknowledge.", exc_info=True)

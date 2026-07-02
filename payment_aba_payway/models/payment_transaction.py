@@ -6,7 +6,7 @@ import logging
 from odoo.exceptions import UserError
 from odoo import _, models, fields, api
 from odoo.addons.payment import utils as payment_utils
-from odoo.tools import float_round
+from odoo.tools import float_compare, float_round
 from odoo.exceptions import ValidationError
 
 from odoo.addons.payment_aba_payway import const
@@ -186,12 +186,15 @@ class PaymentTransaction(models.Model):
         data.update({
             'tran_id': self.provider_reference,
         })
-        self._handle_notification_data('aba_payway', data)
+
+        # Set the parent transaction to done directly, bypassing the notification pipeline.
+        # The parent was already validated at the pre-auth stage.
+        self._set_done()
 
         if capture_child_tx:
             capture_child_tx._handle_notification_data('aba_payway', data)
 
-        return capture_child_tx 
+        return capture_child_tx
 
     def _send_void_request(self, amount_to_void=None):
         """ Override of `payment` to send a void request to Adyen. """
@@ -302,8 +305,10 @@ class PaymentTransaction(models.Model):
             return
         
         tran_id = notification_data.get('tran_id', '')
+        is_from_webhook = self.env.context.get('payway_from_webhook', False)
+
         # Check if payment status is manually set from upstream
-        payment_status = notification_data.get('payment_status', '').upper()
+        upstream_payment_status = notification_data.get('payment_status', '').upper()
         try:
             payway_transaction_detail: dict = self.provider_id._payway_api_get_transaction_detail(tran_id)
         
@@ -315,7 +320,31 @@ class PaymentTransaction(models.Model):
             )
             return
 
-        payment_status = payment_status or payway_transaction_detail.get("data", {}).get('payment_status', '').upper()
+        api_payment_status = payway_transaction_detail.get('data', {}).get('payment_status', '').upper()
+        payment_status = (
+            api_payment_status
+            if is_from_webhook
+            else (
+                upstream_payment_status
+                if upstream_payment_status and upstream_payment_status == const.STATUS_MAPPING['CANCELLED']
+                else api_payment_status
+            )
+        )
+
+        is_valid_settlement, settlement_validation_message = self._payway_validate_transaction_detail(
+            payway_transaction_detail,
+            payment_status,
+        )
+        if not is_valid_settlement:
+            _logger.warning(
+                "PayWay settlement validation failed for transaction %s and provider reference %s: %s; payload=%s",
+                self.reference,
+                tran_id,
+                settlement_validation_message,
+                pprint.pformat(payway_transaction_detail.get('data', {})),
+            )
+            self._set_pending(settlement_validation_message)
+            return
 
         # Update the provider reference.
         self.provider_reference = tran_id 
@@ -362,3 +391,60 @@ class PaymentTransaction(models.Model):
                 "Received unknown payment status: %(payment_status)s; reference %(reference)s; payway reference %(provider_reference)s", 
                 payment_status=payment_status, reference=self.reference, provider_reference=self.provider_reference
             ))
+
+    # === Custom validation methods ===
+    def _payway_validate_transaction_detail(self, payway_transaction_detail, payment_status):
+        """Validate PayWay amount/currency against the Odoo transaction.
+
+        The validation is enforced only for statuses that can complete/authorize a payment.
+        """
+        self.ensure_one()
+
+        detail_data = payway_transaction_detail.get('data', {})
+        if payment_status not in (
+            const.STATUS_MAPPING['APPROVED'],
+            const.STATUS_MAPPING['PRE-AUTH'],
+        ):
+            return True, None
+
+        expected_currency = (self.currency_id.name or '').upper()
+        payway_currency = str(detail_data.get('original_currency') or '').upper().strip()
+
+        if not payway_currency or payway_currency != expected_currency:
+            return False, _(
+                "Payment validation failed: currency mismatch (expected %(expected)s, got %(actual)s).",
+                expected=expected_currency,
+                actual=payway_currency or 'N/A',
+            )
+
+        expected_precision = const.CURRENCY_DECIMALS.get(payway_currency)
+        expected_amount = float_round(
+            self.amount,
+            precision_digits=expected_precision,
+            rounding_method='DOWN',
+        )
+
+        payway_amount = float(detail_data.get('original_amount'))
+        if payway_amount is None:
+            return False, _(
+                "Payment validation failed: gateway amount is missing or invalid."
+            )
+
+        amount_matches = (
+            float_compare(
+                expected_amount,
+                payway_amount,
+                precision_digits=expected_precision,
+            )
+            == 0
+        )
+        if not amount_matches:
+            return False, _(
+                "Payment validation failed: amount mismatch (expected %(expected_amount)s %(currency)s, got %(actual_amount)s %(actual_currency)s).",
+                expected_amount=expected_amount,
+                currency=expected_currency,
+                actual_amount=payway_amount,
+                actual_currency=payway_currency,
+            )
+
+        return True, None
