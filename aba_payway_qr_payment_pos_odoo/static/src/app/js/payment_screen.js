@@ -55,6 +55,30 @@ patch(PaymentScreen.prototype, {
         });
     },
 
+    async deletePaymentLine(uuid) {
+        const line = this.paymentLines.find((line) => line.uuid === uuid);
+
+        const isPaywayQr =
+            line?.payment_method_id?.payment_method_type === "qr_code" &&
+            PAYWAY_QR_CODE_METHOD.includes(line?.payment_method_id?.qr_code_method);
+
+        if (isPaywayQr && line.transaction_id && line.payment_method_id && line.payment_method_id.id) {
+            // Cancel the QR transaction before removing the payment line
+            try {
+                await this.orm.call("pos.payment.method", "payway_cancel_transaction", [
+                    [line.payment_method_id.id],
+                    line.transaction_id,
+                ]);
+            } catch (error) {
+                console.warn("Failed to cancel Payway transaction:", error);
+                // Continue with deletion even if cancellation fails
+                // The transaction might have already expired or been cancelled
+            }
+        }
+
+        return super.deletePaymentLine(uuid);
+    },
+
     async sendPaymentRequest(line) {
         const isPaywayQr =
             line.payment_method_id.payment_method_type === "qr_code" &&
@@ -114,9 +138,10 @@ patch(PaymentScreen.prototype, {
             }
             return line.handle_payment_response(isRefundComplete);
         } catch (error) {
+            const errorMessage = error?.data?.message ?? error?.message ?? "Failed to process PayWay refund";
             this.dialog.add(AlertDialog, {
                 title: _t("Refund Failed"),
-                body: error?.message || _t("Failed to process PayWay refund."),
+                body: _t(errorMessage),
             });
             return line.handle_payment_response(false);
         }

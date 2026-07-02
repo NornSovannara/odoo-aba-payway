@@ -34,7 +34,6 @@ def _make_payway_api_request(base_url: str, endpoint: str, payload: dict):
     adapter = HTTPAdapter(max_retries=retry_strategy)
     session = requests.Session()
     session.mount("https://", adapter)
-    session.mount("http://", adapter)
 
     try:
         _logger.info(

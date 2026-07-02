@@ -11,11 +11,34 @@ import { PAYWAY_QR_CODE_METHOD } from "./const";
 const FIFTENNSEC = 15 * 1000;
 const formatCurrency = registry.subRegistries.formatters.content.monetary[1];
 
+// Compatibility shim: ensure `title` is a valid prop even in POS builds that omit it.
+// payment.name (passed as title) is an Odoo Char field that serialises as `false` when
+// unset — OWL's optional check only skips validation for `undefined`, so we must
+// explicitly accept `false` here.
+QRPopup.props = {
+    ...(QRPopup.props || {}),
+    title: {
+        validate: (m) =>
+            m === false ||
+            typeof m === "string" ||
+            (typeof m === "object" && typeof m?.toString === "function"),
+        optional: true,
+    },
+};
+
 patch(QRPopup.prototype, {
 
     setup() {
         super.setup(...arguments);
         this.orm = useService("orm");
+
+        // payment.name (passed as props.title) is an Odoo Char field that is `false`
+        // when unset. The ConfirmationDialog template passes props.title directly to
+        // Dialog which requires a String — so normalise to the payment method name.
+        if (!this.props.title) {
+            this.props.title = this.props.line.payment_method_id.name || "";
+            this.props.body = _t("Please scan the QR code with %s", this.props.title);
+        }
 
         const qrCodeMethod = this.props.line.payment_method_id.qr_code_method
         const digitalQrLifetime = this.props.line.payment_method_id.digital_qr_lifetime
@@ -26,7 +49,7 @@ patch(QRPopup.prototype, {
             countDown: null,
 
             currency_name: this.props.order.currency.name,
-            displayAmount: formatCurrency(this.props.order.get_total_with_tax() || 0, false),
+            displayAmount: formatCurrency(this.props.line.amount || 0, false),
             merchantDisplayName: this.props.order.session.config_id.display_name,
         });
 

@@ -35,7 +35,6 @@ def _make_payway_api_request(base_url: str, endpoint: str, payload: dict):
     adapter = HTTPAdapter(max_retries=retry_strategy)
     session = requests.Session()
     session.mount("https://", adapter)
-    session.mount("http://", adapter)
 
     try:
         _logger.info(
@@ -177,7 +176,9 @@ class ResBank(models.Model):
             qr_tran_id = self._context.get('qr_tran_id') if self._context.get('qr_tran_id') else ""
 
             api_url, merchant_id, api_key, _ = self._payway_get_api_cred()
-            self._payway_api_close_transaction(qr_tran_id)
+            
+            # Now close trnx is call when user remove payment trnx on frontend
+            # self._payway_api_close_transaction(qr_tran_id)
 
             base_odoo_url:str = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
             base_odoo_url = (
@@ -188,13 +189,34 @@ class ResBank(models.Model):
             
             uat_webhook_url = f"https://demo-payway.ababank.com/odooapp{const.WEB_HOOK_PATH['pos']}"
 
+            # Customer name: Individual -> first=name, last=company; Company -> first=name, last=blank
+            if debtor_partner and debtor_partner.is_company:
+                first_name = (debtor_partner.name or '')[:20]
+                last_name = ''
+            elif debtor_partner:
+                first_name = (debtor_partner.name or '')[:20]
+                last_name = (debtor_partner.company_name or '')[:20]
+            else:
+                first_name = ''
+                last_name = ''
+
+            # Items from context (base64-encoded JSON array)
+            items_list = self._context.get('items', [])
+            items_encoded = (
+                base64.b64encode(json.dumps(items_list).encode('utf-8')).decode('utf-8')
+                if items_list else ''
+            )
+
             payload = {
                 'req_time': datetime.now().strftime("%Y%m%d%H%M%S"),
                 'merchant_id': merchant_id,
-                'tran_id': qr_tran_id,                
-                'email': self.partner_id.email,
-                'phone': self.partner_id.phone,
+                'tran_id': qr_tran_id,
+                'first_name': first_name,
+                'last_name': last_name,
+                'email': (debtor_partner.email[:50] or '') if debtor_partner else '',
+                'phone': (debtor_partner.phone[:20] or '') if debtor_partner else '',
                 'amount': amount,
+                'items': items_encoded,
                 'payment_option': qr_method,
                 'currency': currency.name.upper(),
                 'lifetime': (
@@ -347,6 +369,7 @@ class ResBank(models.Model):
             return response
 
         raise ValidationError(self._payway_construct_error_message(response))
+
 
     def _payway_get_api_cred(self):
         """Return the URL of the API corresponding to the selected payway environment.
