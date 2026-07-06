@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>ABA PayWay QR Payment for POS</title>
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1 { color: #5a1e82; }
+        h2 { color: #5a1e82; border-bottom: 2px solid #5a1e82; padding-bottom: 6px; margin-top: 30px; }
+        ul { line-height: 1.8; }
+        ol { line-height: 1.8; }
+        .highlight { background: #f4f0f8; border-left: 4px solid #5a1e82; padding: 12px 16px; border-radius: 4px; margin: 16px 0; }
+        a { color: #5a1e82; }
+    </style>
+</head>
+<body>
+
+<h1>ABA PayWay QR Payment for POS</h1>
+
+<p>
+    Let customers pay using QR codes directly in Odoo Point of Sale.
+    This module supports multiple payment QR formats — <strong>ABA KHQR</strong>, <strong>WeChat Pay</strong>,
+    and <strong>Alipay</strong> — by displaying the payment QR on the POS customer screen or printed bill
+    (printed bill QR is only available for the POS Restaurant module).
+</p>
+
+<h2>Features</h2>
+<ul>
+    <li>Dynamic QR code generation at checkout using ABA PayWay API</li>
+    <li>Supports ABA KHQR, WeChat Pay, and Alipay formats</li>
+    <li>Display QR on the POS cashier screen and customer-facing display</li>
+    <li>Print QR code on restaurant bills (POS Restaurant module required)</li>
+    <li>Configurable per payment method and per Point of Sale</li>
+</ul>
+
+<h2>Getting Started</h2>
+<ol>
+    <li>
+        Go to <strong>Contacts → Configuration → Bank Accounts</strong>, select the bank account
+        you want to accept payments with, then fill in your <em>API Key</em> and <em>Merchant ID</em>
+        as provided by ABA PayWay.
+    </li>
+</ol>
+
+<div class="highlight">
+    Need a Sandbox account?
+    <a href="https://sandbox.payway.com.kh/login/" target="_blank">Register here</a>
+</div>
+
+<h2>Configuration</h2>
+<ol>
+    <li>Go to <strong>POS module → Configuration → Payment Methods</strong>.</li>
+    <li>Click <strong>Add New</strong>, then in the <em>Integration</em> section:</li>
+    <ul>
+        <li>Choose <strong>Bank App (QR Code)</strong></li>
+        <li>Select a QR format: <strong>ABA KHQR</strong>, <strong>WeChat Pay</strong>, or <strong>Alipay</strong></li>
+        <li>Make sure to use the same name for the Payment Method Name</li>
+        <li>Configure the Bank Journal as usual</li>
+    </ul>
+    <li>
+        To print the payment QR on bills, enable <strong>"Allow QR on bills"</strong>
+        (works with Restaurant POS only), then select the Point of Sale to apply it to.
+    </li>
+</ol>
+
+<h2>Support</h2>
+<p>
+    For assistance, please contact <strong>ABA Bank</strong> or visit
+    <a href="https://www.payway.com.kh/" target="_blank">payway.com.kh</a>.
+</p>
+
+</body>
+</html>
