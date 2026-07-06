@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>ABA PayWay QR Payment for e-Commerce</title>
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1 { color: #5a1e82; }
+        h2 { color: #5a1e82; border-bottom: 2px solid #5a1e82; padding-bottom: 6px; margin-top: 30px; }
+        ul { line-height: 1.8; }
+        ol { line-height: 1.8; }
+        .highlight { background: #f4f0f8; border-left: 4px solid #5a1e82; padding: 12px 16px; border-radius: 4px; margin: 16px 0; }
+        a { color: #5a1e82; }
+    </style>
+</head>
+<body>
+
+<h1>ABA PayWay QR Payment for e-Commerce</h1>
+
+<p>
+    This module integrates <strong>ABA PayWay</strong> as a payment provider on your Odoo e-commerce website,
+    allowing customers to pay using QR code at checkout.
+</p>
+
+<h2>Features</h2>
+<ul>
+    <li>ABA PayWay QR payment option on the e-commerce checkout page</li>
+    <li>Seamless integration with Odoo's native payment provider framework</li>
+    <li>Real-time payment status updates via ABA PayWay API</li>
+    <li>Supports sandbox mode for testing before going live</li>
+</ul>
+
+<h2>Getting Started</h2>
+<ol>
+    <li>
+        Go to <strong>Accounting → Configuration → Payment Providers</strong> and activate
+        <strong>ABA PayWay</strong>.
+    </li>
+    <li>
+        Enter your <em>API Key</em> and <em>Merchant ID</em> as provided by ABA PayWay.
+    </li>
+    <li>
+        Set the provider to <strong>Production</strong> mode when ready to go live.
+    </li>
+</ol>
+
+<div class="highlight">
+    Need a Sandbox account?
+    <a href="https://sandbox.payway.com.kh/login/" target="_blank">Register here</a>
+</div>
+
+<h2>Requirements</h2>
+<ul>
+    <li>An active ABA PayWay merchant account</li>
+    <li>Python package: <code>cryptography</code> (installed automatically)</li>
+</ul>
+
+<h2>Support</h2>
+<p>
+    For assistance, please contact <strong>ABA Bank</strong> or visit
+    <a href="https://www.payway.com.kh/" target="_blank">payway.com.kh</a>.
+</p>
+
+</body>
+</html>

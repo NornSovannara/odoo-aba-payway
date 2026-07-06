@@ -24,6 +24,7 @@
         Then select the Point of Sales of your choice - the payment option will now appear on both the cashier and customer screens during checkout.
     """,
     'author': 'ABA Bank',
+    'license': 'LGPL-3',
     'category': 'Point of Sale',
     'depends': [
         'account',
