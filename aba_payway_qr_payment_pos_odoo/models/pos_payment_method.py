@@ -124,10 +124,7 @@ class PosPaymentMethod(models.Model):
             else {'precision_rounding': order_currency.rounding}
         )
 
-        # === Check 1: sum of all payment lines must cover Odoo-recomputed total ===
-        # _compute_prices() uses Odoo's own tax engine on stored order lines,
-        # handling discounts, loyalty rewards, and promotions correctly.
-        # This detects tampering of both payment lines and QR amount.
+        # === sum of all payment lines must cover Odoo-recomputed total ===
         order._compute_prices()
         odoo_total = order.amount_total
         total_payments = sum(order.payment_ids.filtered(lambda p: p.amount > 0).mapped('amount'))
@@ -144,10 +141,7 @@ class PosPaymentMethod(models.Model):
                 odoo_total=odoo_total,
             ))
 
-        # === Check 2: QR amount must match the specific PayWay payment line ===
-        # Catches attackers who tamper only the QR request without touching sync.
-        # Also verifies the matched payment line belongs to a PayWay method —
-        # qr_code_method is a server-stored field and cannot be forged via sync.
+        # === QR amount must match the specific PayWay payment line ===
         client_amount = float(amount)
         qr_tran_id = self._context.get('qr_tran_id')
         payway_payment = order.payment_ids.filtered(
@@ -193,7 +187,6 @@ class PosPaymentMethod(models.Model):
         if not free_communication:
             return self.env['pos.order']
 
-        # Split on last space: order name is everything except the last token (tracking_number)
         parts = free_communication.strip().rsplit(' ', 1)
         if len(parts) != 2:
             return self.env['pos.order']

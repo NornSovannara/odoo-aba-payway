@@ -20,15 +20,6 @@ class PayWayController(http.Controller):
             _logger.info("Notification received from PayWay with data:\n%s", pprint.pformat(data))        
             channel_name = 'pos.order.payment.payway.' + data['tran_id']
             
-            # TODO: Verify webhook signature
-            
-            # PROBLEM: pos.payment does not exist before order completed
-            # So, I cannot retreive by transaction_id
-            # bank = request.env['pos.payment'].sudo().search([
-            #     ('transaction_id', '=', data['tran_id']),
-            # ], limit=1).payment_method_id.journal_id.bank_account_id
-
-            # As a workaround, I will search for any payment method with qr code method and get bank account from it
             payment_method = request.env['pos.payment.method'].sudo().search([
                 ('qr_code_method', 'in', list(const.PAYMENT_METHODS_CODES))
             ], limit=1)

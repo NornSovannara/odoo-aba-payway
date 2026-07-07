@@ -1,20 +1,10 @@
-# TODO: Consts should be sets ideally
-# FIX: Store list of constant in set.
-# For hash keys, cannot be converted as order matters.
-
 PAYMENT_METHODS_MAPPING = {
     'card': 'cards',
-    # TODO: Redundant?
-    # COMMENT: While redundant, I decided to keep these for explicitness and validation.
     'abapay_khqr': 'abapay_khqr',
     'wechat_pay': 'wechat',
     'alipay': 'alipay',
 }
 
-# TODO: Keep only relevant ones. Use .get() when fetching from set.
-# FIX: Remove mapping
-# 'alipay': 'alipay'
-# 'wechat_pay': 'wechat'
 PAYWAY_PAYMENT_METHODS_MAPPING = {
     'visa': 'visa',
     'mastercard': 'mc',
