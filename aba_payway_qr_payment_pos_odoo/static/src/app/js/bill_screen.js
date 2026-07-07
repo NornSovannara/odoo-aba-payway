@@ -55,7 +55,6 @@ patch(BillScreen.prototype, {
             payment.transaction_id = this.pos._paywayCreateTxnId(payment);
 
             // Sync order to server before QR generation to enable server-side validation
-            // of amount and currency, preventing tampering at the RPC call level.
             try {
                 await this.pos.syncAllOrders({ orders: [order] });
             } catch (error) {

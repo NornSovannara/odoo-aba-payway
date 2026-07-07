@@ -7,22 +7,6 @@ import { AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
 
 import { PAYWAY_QR_CODE_METHOD } from "./const";
 
-// When open payment screen
-//  IF payment is aba
-//      IF payment allow print on bill  
-//          IF order has already print on bill with QR
-//              Check payment transaction status
-//              IF payment is complete
-//                  Validate order -> complete order
-//  Set a bus notification
-//  If User stay in payment screen:
-//      If receive webhook (from scan bill):     
-//          complete order when
-//  If User open QR popup:
-//      If receive webhook (from scan qr popup dialog):
-//          close open dialog
-//          complete order
-
 patch(PaymentScreen.prototype, {
     setup() {
         super.setup(...arguments);
