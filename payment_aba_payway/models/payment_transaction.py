@@ -3,8 +3,7 @@ import pprint
 from urllib.parse import urljoin
 import logging
 
-from odoo.exceptions import UserError
-from odoo import _, models, fields, api
+from odoo import _, models
 from odoo.addons.payment import utils as payment_utils
 from odoo.tools import float_compare, float_round
 from odoo.exceptions import ValidationError
@@ -30,14 +29,6 @@ class PaymentTransaction(models.Model):
             return super()._compute_reference(provider_code, prefix=prefix, **kwargs)
 
         if not prefix:
-            # TODO: Why do we need to encode timestamp to base62? Timestamps will already be unique?
-            # ANSWER: PayWay requires transaction reference to be at most 20 characters long, so base62 shorten the length. 
-            
-            # NOTE: 2026-Mar-04
-            # As per requirement from PO:
-            # combine Odoo reference with base62 encoded timestamp (Not raw timestamp, we want to keep original reference as much as possible)
-            # if combined length exceed 20 character, we truncate Odoo reference to fit the 20 character limit.
-
             prefix = self.sudo()._compute_reference_prefix(provider_code, separator, **kwargs)
 
         prefix = payway_utils._compute_payway_tran_id(prefix=prefix, separator=separator)
@@ -61,8 +52,10 @@ class PaymentTransaction(models.Model):
         api_url, merchant_id, api_key, _ = self.provider_id._payway_get_api_cred()
 
         req_time = datetime.now().strftime('%Y%m%d%H%M%S')
-        partner_first_name, partner_last_name = payment_utils.split_partner_name(
-            self.partner_name
+        partner_first_name, partner_last_name = (
+            payment_utils.split_partner_name(self.partner_name) 
+            if self.partner_name 
+            else (None, None)
         )
         payment_option = const.PAYMENT_METHODS_MAPPING[self.payment_method_id.code]
 
@@ -80,16 +73,14 @@ class PaymentTransaction(models.Model):
             self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         )
 
-        # webhook_url = urljoin(
-        #     (
-        #         base_odoo_url.replace('http://', 'https://', 1)
-        #         if base_odoo_url and base_odoo_url.startswith('http://')
-        #         else base_odoo_url
-        #     ),
-        #     const.WEB_HOOK_PATH['webhook'],
-        # )
-
-        uat_webhook_url = f"https://demo-payway.ababank.com/odooapp{const.WEB_HOOK_PATH['webhook']}"
+        webhook_url = urljoin(
+            (
+                base_odoo_url.replace('http://', 'https://', 1)
+                if base_odoo_url and base_odoo_url.startswith('http://')
+                else base_odoo_url
+            ),
+            const.WEB_HOOK_PATH['webhook'],
+        )
 
         rendering_values = {
             'form_url': api_url + '/api/payment-gateway/v1/payments/purchase',
@@ -111,7 +102,7 @@ class PaymentTransaction(models.Model):
             'merchant_id': merchant_id,
             'currency': self.currency_id.name,
             'skip_success_page': 1,
-            'return_url': uat_webhook_url,
+            'return_url': webhook_url,
             'continue_success_url': urljoin(base_odoo_url, '/payment/status'),
         }
 
@@ -294,9 +285,6 @@ class PaymentTransaction(models.Model):
         :param dict notification_data: The notification data sent by the provider.
         :return: None
         """
-
-        # NOTE: Without check transaction API, We need to set payment status manually
-        # to distinguish between status of transaction.
 
         self.ensure_one()
 
