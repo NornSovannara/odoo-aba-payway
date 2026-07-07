@@ -12,8 +12,6 @@ patch(PosStore.prototype, {
 
         if (PAYWAY_QR_CODE_METHOD.includes(payment.payment_method_id.qr_code_method)) {
             // Sync order to server before QR generation to enable server-side validation
-            // of amount and currency, preventing tampering at the RPC call level.
-            // Only done for PayWay methods — other providers are not affected.
             try {
                 await this.syncAllOrders({ orders: [order] });
             } catch (error) {
