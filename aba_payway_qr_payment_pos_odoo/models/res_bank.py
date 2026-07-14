@@ -208,13 +208,7 @@ class ResBank(models.Model):
                     'template2' if model == 'pos.order' and 
                     qr_type == const.POS_ORDER_QR_TYPE['bill'] else 'template1_color'
                 ),
-                # 'callback_url': base64.b64encode(webhook_url.encode('utf-8')).decode(
-                #     'utf-8'
-                # ),
-                # TODO: Remove in prod
-                'callback_url': base64.b64encode(
-                    f"https://demo-payway.ababank.com/odooapp{const.WEB_HOOK_PATH['pos']}"
-                    .encode('utf-8')).decode(
+                'callback_url': base64.b64encode(webhook_url.encode('utf-8')).decode(
                     'utf-8'
                 ),
             }
