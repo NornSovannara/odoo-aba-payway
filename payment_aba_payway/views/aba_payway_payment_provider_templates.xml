@@ -4,6 +4,12 @@
         <xpath expr="//div[@name='o_payment_status_alert']/a" position="attributes">
             <attribute name="t-if">is_processing and tx.provider_id.code != 'aba_payway'</attribute>
         </xpath>
+        <xpath expr="//t[@t-if=&quot;tx.state == 'draft'&quot;]/t[@t-set='status_message']/p" position="attributes">
+            <attribute name="t-if">tx.provider_id.code != 'aba_payway'</attribute>
+        </xpath>
+        <xpath expr="//t[@t-if=&quot;tx.state == 'draft'&quot;]/t[@t-set='status_message']/p" position="after">
+            <p t-if="tx.provider_id.code == 'aba_payway'">Your payment is being processed. Please do not refresh or close your browser.</p>
+        </xpath>
     </template> 
 
     <template id="payment_aba_payway.form" inherit_id="payment.form">
