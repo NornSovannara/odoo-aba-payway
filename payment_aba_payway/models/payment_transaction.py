@@ -102,8 +102,7 @@ class PaymentTransaction(models.Model):
             'merchant_id': merchant_id,
             'currency': self.currency_id.name,
             'skip_success_page': 1,
-            # 'return_url': webhook_url,
-            'return_url': f"https://demo-payway.ababank.com/odooapp{const.WEB_HOOK_PATH['webhook']}",
+            'return_url': webhook_url,
             'continue_success_url': urljoin(base_odoo_url, '/payment/status'),
         }
 
