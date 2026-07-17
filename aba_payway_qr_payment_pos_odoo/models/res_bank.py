@@ -20,8 +20,6 @@ _logger = logging.getLogger(__name__)
 
 MAX_RETRY = 2
 
-# TODO: Consider using Retry from urllib3 for a more standard implementation
-# FIX: use urlib3 Retry
 def _make_payway_api_request(base_url: str, endpoint: str, payload: dict):
     url = urljoin(base_url, endpoint)
 
@@ -60,17 +58,6 @@ def _make_payway_api_request(base_url: str, endpoint: str, payload: dict):
 
 class ResBank(models.Model):
     _inherit = "res.partner.bank"
-
-    # TODO: Can use the same fields for both prod and sandbox.
-    # COMMENT: As per checkout with our PO,
-    # We decide th keep seperate fields for both env
-    # so, when user switch env, they dont have to re-enter cred
-
-    # TODO: Ideally store credentials under payment.provider
-    
-    # TODO Modify _payway_get_api_cred() to differentiate between prod and sandbox
-    # FIX: differentiate cred field between prod and sandbox,
-    # _payway_get_api_cred() also return base on enviroment
 
     production_payway_merchant_id = fields.Char(
         string='Merchant ID',
@@ -174,22 +161,15 @@ class ResBank(models.Model):
             model = self._context.get('model')
             qr_type = self._context.get('qr_type')
             qr_tran_id = self._context.get('qr_tran_id') if self._context.get('qr_tran_id') else ""
-
             api_url, merchant_id, api_key, _ = self._payway_get_api_cred()
             
-            # Now close trnx is call when user remove payment trnx on frontend
-            # self._payway_api_close_transaction(qr_tran_id)
-
             base_odoo_url:str = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
             base_odoo_url = (
                 base_odoo_url.replace('http://', 'https://', 1)
                 if base_odoo_url and base_odoo_url.startswith('http://') else base_odoo_url
             )
-            # webhook_url = urljoin(base_odoo_url, const.WEB_HOOK_PATH['pos']) if model == 'pos.order' else ''
+            webhook_url = urljoin(base_odoo_url, const.WEB_HOOK_PATH['pos']) if model == 'pos.order' else ''
             
-            uat_webhook_url = f"https://demo-payway.ababank.com/odooapp{const.WEB_HOOK_PATH['pos']}"
-
-            # Customer name: Individual -> first=name, last=company; Company -> first=name, last=blank
             if debtor_partner and debtor_partner.is_company:
                 first_name = (debtor_partner.name or '')[:20]
                 last_name = ''
@@ -228,13 +208,11 @@ class ResBank(models.Model):
                     'template2' if model == 'pos.order' and 
                     qr_type == const.POS_ORDER_QR_TYPE['bill'] else 'template1_color'
                 ),
-                'callback_url': base64.b64encode(uat_webhook_url.encode('utf-8')).decode(
+                'callback_url': base64.b64encode(webhook_url.encode('utf-8')).decode(
                     'utf-8'
                 ),
             }
 
-            # TODO: QR_PAYMENT_SECURE_HASH_KEYS doesn't exist?
-            # Fix: Create QR_PAYMENT_SECURE_HASH_KEYS
             payload.update(
                 {'hash': self._payway_calculate_payment_secure_hash(api_key, payload, const.QR_PAYMENT_SECURE_HASH_KEYS)}
             )
@@ -340,7 +318,7 @@ class ResBank(models.Model):
             str(response['status']['code']) == '00'
             or str(response['status']['code']) == '5'
         ):
-            # Success or Transaction no found
+            # Success or Transaction not found
             return response
 
         raise ValidationError(self._payway_construct_error_message(response))
