@@ -29,4 +29,7 @@
     'post_init_hook': 'post_init_hook',
     'uninstall_hook': 'uninstall_hook',
     'license': 'LGPL-3',
+    'images': [
+        'static/description/banner.gif',
+    ],
 } # pyright: ignore[reportUnusedExpression]
