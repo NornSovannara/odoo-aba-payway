@@ -9,7 +9,6 @@ from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 import requests
 
-from odoo.exceptions import UserError
 from odoo.exceptions import ValidationError
 from odoo import _, models, fields, api
 
@@ -198,8 +197,6 @@ class PaymentProvider(models.Model):
         return base64_encoded
 
     def _payway_api_get_transaction_detail(self, tran_id: str):
-        # TODO: If parent function already ensures one, no need in in children
-        # Fix: no `ensure_one()` in child function.
         self.ensure_one()
 
         api_url, merchant_id, api_key, _ = self._payway_get_api_cred()
