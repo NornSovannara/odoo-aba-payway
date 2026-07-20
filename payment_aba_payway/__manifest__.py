@@ -1,5 +1,5 @@
 {
-    'name': 'ABA PayWay QR Payment for e-commerce',
+    'name': 'ABA PayWay for Odoo eCommerce',
     'countries': ['KH'],
     'version': '1.0',
     'author': 'ABA Bank',
