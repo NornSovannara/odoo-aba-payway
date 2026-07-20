@@ -1,5 +1,5 @@
 {
-    'name': 'ABA PayWay QR Payment for POS',
+    'name': 'ABA PayWay for Odoo Point of Sales',
     'countries': ['KH'],
     'version': '1.0',
     'summary': 'Display dynamic payment QR codes on screen and printed bills.',
