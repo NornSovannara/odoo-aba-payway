@@ -148,7 +148,7 @@
     left: 0;
     width: 50vw;
     height: 100vh;
-    background: #ffffff;
+    background: #f6f7f9;
     border-right: 1px solid #d1d5db;
     z-index: 1055;
     display: flex;
@@ -184,12 +184,53 @@
     display: block;
 }
 
-// Responsive: on portrait / narrow customer displays, let the PayWay panel
-// take the full width so the hosted page (which reflows itself) stays legible.
+// Post-payment: the ABA page keeps playing its animation on the left; cover the
+// right-side order items with a plain Thank-you message (+ Powered by footer).
+.payway-cd-thankyou-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 50vw;
+    height: 100vh;
+    background: #f6f7f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1056;
+}
+
+.payway-thank-you {
+    font-family: 'NunitoSans', var(--bs-font-sans-serif);
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    font-weight: 700;
+    color: #9ca3af;
+}
+
+.payway-powered-by {
+    position: absolute;
+    bottom: 24px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 12px;
+    color: #9ca3af;
+}
+
+.payway-powered-odoo {
+    font-weight: 600;
+    color: #6b7280;
+}
+
+// Responsive: on portrait / narrow customer displays, run a single-panel flow:
+// QR (iframe) -> success animation (iframe) -> Thank you, each full width.
 @media (max-aspect-ratio: 1/1), (max-width: 900px) {
     .payway-cd-overlay-panel {
         width: 100vw;
         border-right: 0;
+    }
+
+    .payway-cd-thankyou-panel {
+        width: 100vw;
     }
 }
 

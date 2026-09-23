@@ -9,6 +9,11 @@ import { PAYWAY_QR_CODE_METHOD } from "./const";
 
 const MODULE_IMG = "/aba_payway_qr_payment_pos_odoo/static/src/img";
 
+// Narrow displays show a single full-width panel, so the Thank-you would cover
+// the iframe animation immediately — delay it so the animation plays first.
+const NARROW_MEDIA = "(max-aspect-ratio: 1/1), (max-width: 900px)";
+const NARROW_THANKYOU_DELAY_MS = 4 * 1000;
+
 function _escape(text) {
     const div = document.createElement("div");
     div.textContent = text ?? "";
@@ -119,6 +124,12 @@ function _buildIframePanel(checkoutUrl) {
                 allow="clipboard-write" title="ABA PayWay QR"></iframe>`;
 }
 
+function _buildThankYouPanel() {
+    return `
+        <div class="payway-thank-you">Thank you.</div>
+        <div class="payway-powered-by">Powered by <span class="payway-powered-odoo">odoo</span></div>`;
+}
+
 // Fully replace the core setup: bypass Odoo's default dialog-based QR popup
 // (which fires unconditionally on qrPaymentData) and drive our own left-half
 // overlay for PayWay methods while preserving the default behavior for others.
@@ -130,14 +141,50 @@ patch(CustomerDisplay.prototype, {
 
         let currentDialogCloseFn = null;
         let overlayEl = null;
+        let thankYouEl = null;
+        let thankYouTimer = null;
         let currentIframeUrl = null;
 
         const removeOverlay = () => {
+            if (thankYouTimer) {
+                clearTimeout(thankYouTimer);
+                thankYouTimer = null;
+            }
             if (overlayEl) {
                 overlayEl.remove();
                 overlayEl = null;
             }
+            if (thankYouEl) {
+                thankYouEl.remove();
+                thankYouEl = null;
+            }
             currentIframeUrl = null;
+        };
+
+        const renderThankYou = () => {
+            if (thankYouEl) {
+                return;
+            }
+            thankYouEl = document.createElement("div");
+            thankYouEl.className = "payway-cd-thankyou-panel";
+            thankYouEl.innerHTML = _buildThankYouPanel();
+            document.body.appendChild(thankYouEl);
+        };
+
+        const showThankYou = () => {
+            if (thankYouEl || thankYouTimer) {
+                return;
+            }
+            // On narrow single-panel displays the Thank-you covers the iframe, so
+            // hold it back until ABA's success animation has played.
+            if (window.matchMedia(NARROW_MEDIA).matches) {
+                thankYouTimer = setTimeout(() => {
+                    thankYouTimer = null;
+                    renderThankYou();
+                }, NARROW_THANKYOU_DELAY_MS);
+                return;
+            }
+            renderThankYou();
         };
 
         useEffect(
@@ -146,16 +193,19 @@ patch(CustomerDisplay.prototype, {
                     !!qrPaymentData &&
                     PAYWAY_QR_CODE_METHOD.includes(qrPaymentData.qrCodeMethod);
 
-                // Keep the live iframe running while the QR is still pending and the
-                // same URL is embedded. Once paymentComplete arrives we fall through
-                // so the iframe is torn down and the success view is shown.
+                // Keep the live iframe mounted whenever the same URL is embedded,
+                // including after paymentComplete, so the ABA-hosted page can play
+                // its own success animation instead of being torn down. On
+                // completion, cover only the right-side items with a Thank-you panel.
                 if (
                     isPaywayMethod &&
                     qrPaymentData.checkoutUrl &&
-                    !qrPaymentData.paymentComplete &&
                     overlayEl &&
                     currentIframeUrl === qrPaymentData.checkoutUrl
                 ) {
+                    if (qrPaymentData.paymentComplete) {
+                        showThankYou();
+                    }
                     return;
                 }
 
@@ -172,14 +222,34 @@ patch(CustomerDisplay.prototype, {
                 if (isPaywayMethod) {
                     overlayEl = document.createElement("div");
                     overlayEl.className = "payway-cd-overlay-panel";
-                    if (qrPaymentData.paymentComplete) {
-                        // Payment done: show our success view (green check + amount).
-                        overlayEl.innerHTML = _buildSuccessPanel(qrPaymentData);
-                    } else if (qrPaymentData.checkoutUrl) {
-                        // Preferred: embed the ABA-hosted QR page (CSP now allows it).
+                    if (qrPaymentData.checkoutUrl) {
+                        // Embed the ABA-hosted QR page and keep it through completion
+                        // so its own success animation plays.
                         overlayEl.classList.add("payway-cd-overlay-panel--iframe");
                         overlayEl.innerHTML = _buildIframePanel(qrPaymentData.checkoutUrl);
                         currentIframeUrl = qrPaymentData.checkoutUrl;
+                        // The first load is the QR page; when ABA navigates to its
+                        // success animation it fires load again — show Thank-you then
+                        // so the right side flips in sync with the animation.
+                        const iframe = overlayEl.querySelector("iframe");
+                        if (iframe) {
+                            let firstLoad = true;
+                            iframe.addEventListener("load", () => {
+                                if (firstLoad) {
+                                    firstLoad = false;
+                                    return;
+                                }
+                                showThankYou();
+                            });
+                        }
+                        document.body.appendChild(overlayEl);
+                        if (qrPaymentData.paymentComplete) {
+                            showThankYou();
+                        }
+                        return;
+                    } else if (qrPaymentData.paymentComplete) {
+                        // Fallback (no hosted page): our own success view.
+                        overlayEl.innerHTML = _buildSuccessPanel(qrPaymentData);
                     } else {
                         // Fallback: render the QR card ourselves from qrString.
                         overlayEl.innerHTML = _buildKhqrPanel(qrPaymentData);

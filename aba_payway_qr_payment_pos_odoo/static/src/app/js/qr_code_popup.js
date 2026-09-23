@@ -8,7 +8,7 @@ import { AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
 import { onMounted, onWillUnmount } from "@odoo/owl";
 import { PAYWAY_QR_CODE_METHOD } from "./const";
 
-const FIFTENNSEC = 15 * 1000;
+const POLL_INTERVAL_MS = 3 * 1000;
 const SUCCESS_VIEW_DURATION_MS = 5 * 1000;
 const formatCurrency = registry.subRegistries.formatters.content.monetary[1];
 
@@ -194,7 +194,8 @@ patch(QRPopup.prototype, {
 
         this.paywayQRState.pollingInProgress = true;
 
-        // Every 15 seconds, verify the payment status
+        // Poll the payment status frequently so the customer-display Thank-you
+        // flips close to ABA's own success animation.
         this.intervalPollingTimer = setInterval(() => {
             const elapsedTime = Date.now() - this.pollingStartTime;
             const qrLifetime = this.paywayQRState.DigitalQrLifetime * 60 * 1000;
@@ -209,7 +210,7 @@ patch(QRPopup.prototype, {
                 super._cancel();
             }
 
-        }, FIFTENNSEC);
+        }, POLL_INTERVAL_MS);
     },
 
     _startPaymentCountDown(duration) {
