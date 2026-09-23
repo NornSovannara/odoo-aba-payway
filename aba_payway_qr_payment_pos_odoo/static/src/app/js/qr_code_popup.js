@@ -174,10 +174,10 @@ patch(QRPopup.prototype, {
     },
 
     _showSuccessAndConfirm() {
-        this.paywayQRState.paymentComplete = true;
         this.setButtonsDisabled(true);
         // Flag the payment line so Odoo's customer-display sync swaps the
-        // customer screen to the success view.
+        // CUSTOMER screen to the success view. The cashier keeps the existing
+        // flow: after the hold it proceeds to Odoo's payment success + receipt.
         const line = this.props.line;
         if (line?.qrPaymentData) {
             line.qrPaymentData = { ...line.qrPaymentData, paymentComplete: true };
@@ -186,6 +186,9 @@ patch(QRPopup.prototype, {
         const superConfirm = super._confirm.bind(this);
         this.successViewTimer = setTimeout(() => {
             this.successViewTimer = null;
+            // Reset isProcess (set by setButtonsDisabled) so the base execButton
+            // doesn't bail on `if (this.isProcess) return;` and actually closes.
+            this.setButtonsDisabled(false);
             superConfirm();
         }, SUCCESS_VIEW_DURATION_MS);
     },

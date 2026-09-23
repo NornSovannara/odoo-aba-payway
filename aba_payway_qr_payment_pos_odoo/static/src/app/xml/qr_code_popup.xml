@@ -161,19 +161,6 @@
                     </div>
                     <p class="payment-scan-desc">Scan with WeChat app</p>
                 </div>
-
-                <div t-if="paywayQRState.paymentComplete" class="payway-success-view">
-                    <img
-                        class="payway-success-img"
-                        t-att-src="'/aba_payway_qr_payment_pos_odoo/static/src/img/success.png'"
-                        alt="Success"
-                    />
-                    <div class="payway-success-label">Success</div>
-                    <div class="payway-success-amount">
-                        <t t-out="paywayQRState.displayAmount" />
-                        <span class="payway-success-ccy"><t t-out="paywayQRState.currency_name"/></span>
-                    </div>
-                </div>
             </t>
         </xpath>
 
