@@ -12,6 +12,7 @@ PAYMENT_METHODS_MAPPING = {
 
 API_URLS = {
     'production': 'https://checkout.payway.com.kh',
+    'uat': 'https://checkout-uat.payway.com.kh',
     'sandbox': 'https://checkout-sandbox.payway.com.kh',
 }
 

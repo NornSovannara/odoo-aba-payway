@@ -14,7 +14,8 @@
                 || paywayQRState.qrCodeMethod === 'wechat' 
                 || paywayQRState.qrCodeMethod === 'alipay'"
             >
-                <div class="mt-2 text-center">
+                <div class="mt-2 text-center"
+                     t-att-class="paywayQRState.paymentComplete ? 'd-none' : 'mt-2 text-center'">
                     <p>
                         <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
                         <t t-out="paywayQRState.countDown" />
@@ -30,7 +31,8 @@
                 || paywayQRState.qrCodeMethod === 'alipay'"
             >
                 
-                <div t-if="paywayQRState.qrCodeMethod === 'abapay_khqr'"> 
+                <div t-if="paywayQRState.qrCodeMethod === 'abapay_khqr'"
+                     t-att-class="paywayQRState.paymentComplete ? 'd-none' : ''"> 
                     <img t-att-src="'/aba_payway_qr_payment_pos_odoo/static/src/img/aba-pay.svg'" alt="ABA Pay Logo" />
                     <div class="payment-content khqr">
                         <div>
@@ -80,7 +82,8 @@
                     <p class="payment-scan-desc khqr">Scan with ABA Mobile or any KHQR supported banking app</p>
                 </div>
 
-                <div t-elif="paywayQRState.qrCodeMethod === 'alipay'">
+                <div t-elif="paywayQRState.qrCodeMethod === 'alipay'"
+                     t-att-class="paywayQRState.paymentComplete ? 'd-none' : ''">
                     <img t-att-src="'/aba_payway_qr_payment_pos_odoo/static/src/img/aba-pay.svg'" alt="ABA Pay Logo" />
                     <div class="payment-content"> 
                         <div> 
@@ -120,7 +123,8 @@
                     <p class="payment-scan-desc">Scan with Alipay app</p>
                 </div>
 
-                <div t-elif="paywayQRState.qrCodeMethod === 'wechat'">
+                <div t-elif="paywayQRState.qrCodeMethod === 'wechat'"
+                     t-att-class="paywayQRState.paymentComplete ? 'd-none' : ''">
                     <img t-att-src="'/aba_payway_qr_payment_pos_odoo/static/src/img/aba-pay.svg'" alt="ABA Pay Logo" />
                     <div class="payment-content">
                         <div>
@@ -156,6 +160,19 @@
                         </div>
                     </div>
                     <p class="payment-scan-desc">Scan with WeChat app</p>
+                </div>
+
+                <div t-if="paywayQRState.paymentComplete" class="payway-success-view">
+                    <img
+                        class="payway-success-img"
+                        t-att-src="'/aba_payway_qr_payment_pos_odoo/static/src/img/success.png'"
+                        alt="Success"
+                    />
+                    <div class="payway-success-label">Success</div>
+                    <div class="payway-success-amount">
+                        <t t-out="paywayQRState.displayAmount" />
+                        <span class="payway-success-ccy"><t t-out="paywayQRState.currency_name"/></span>
+                    </div>
                 </div>
             </t>
         </xpath>

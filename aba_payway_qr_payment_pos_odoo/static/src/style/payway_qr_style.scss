@@ -139,3 +139,181 @@
 .payment-scan-desc.khqr {
     line-height: 15px;
 }
+
+// Customer display: fixed LEFT-half overlay hosting our KHQR card.
+// Odoo's default items list + Total on the RIGHT half stays visible.
+.payway-cd-overlay-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 50vw;
+    height: 100vh;
+    background: #ffffff;
+    border-right: 1px solid #d1d5db;
+    z-index: 1055;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.payway-cd-inner {
+    background: #eef1f5;
+    border-radius: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2.5rem;
+    padding: 4% 5%;
+    width: 98%;
+    height: 98%;
+    box-sizing: border-box;
+}
+
+// When embedding the ABA-hosted QR page, the iframe fills the gray card area.
+.payway-cd-overlay-panel--iframe {
+    padding: 0;
+}
+
+.payway-cd-iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #ffffff;
+    display: block;
+}
+
+// Responsive: on portrait / narrow customer displays, let the PayWay panel
+// take the full width so the hosted page (which reflows itself) stays legible.
+@media (max-aspect-ratio: 1/1), (max-width: 900px) {
+    .payway-cd-overlay-panel {
+        width: 100vw;
+        border-right: 0;
+    }
+}
+
+.payway-cd-aba-logo {
+    width: 320px;
+    max-width: 60%;
+    height: auto;
+}
+
+.payway-cd-inner .payment-content {
+    width: 68%;
+    min-width: 320px;
+    max-width: 500px;
+}
+
+.payway-cd-inner .payment-content .payment-qr-content {
+    padding: 24px 24px 32px;
+}
+
+.payway-cd-inner .payment-content img[alt="QR Code"] {
+    width: 78%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+}
+
+.payway-cd-inner .payment-scan-desc {
+    max-width: 320px;
+    font-size: 14px;
+    margin-top: 0;
+}
+
+.payway-scan-inline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    font-size: 16px !important;
+    color: #4b5563 !important;
+    letter-spacing: 0.2px;
+}
+
+.payway-scan-divider {
+    color: #d1d5db;
+    font-size: 18px;
+    line-height: 1;
+    margin: 0 2px;
+}
+
+.payway-scan-badge {
+    height: 22px;
+    width: auto;
+    display: inline-block;
+    border-radius: 3px;
+}
+
+// Right-hand items column tweaks while our PayWay panel is on screen:
+// - remove the border/outline that wraps the selected order line
+body:has(.payway-cd-overlay-panel) .o_customer_display_orderline {
+    border: 0 !important;
+    outline: 0 !important;
+    box-shadow: none !important;
+}
+
+body:has(.payway-cd-overlay-panel) .o_customer_display_orderline.selected {
+    border: 0 !important;
+    outline: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+}
+
+// Cashier popup: embed the ABA-hosted QR page in the modal (portrait layout).
+.payway-cashier-iframe-wrap {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.payway-cashier-iframe {
+    width: 380px;
+    max-width: 90vw;
+    height: 620px;
+    max-height: 75vh;
+    border: 0;
+    background: #ffffff;
+}
+
+// Cashier popup: post-payment success view (shown for 5s before order validates)
+.payway-success-view {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 24px;
+    min-height: 320px;
+}
+
+.payway-success-img {
+    width: 160px;
+    height: 160px;
+    object-fit: contain;
+}
+
+.payway-success-label {
+    margin-top: 20px;
+    font-family: 'NunitoSans', var(--bs-font-sans-serif);
+    font-size: 16px;
+    color: #6b7280;
+    letter-spacing: 0.5px;
+}
+
+.payway-success-amount {
+    margin-top: 6px;
+    font-family: 'NunitoSans', var(--bs-font-sans-serif);
+    font-size: 28px;
+    font-weight: 700;
+    color: #111827;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.payway-success-ccy {
+    font-size: 14px;
+    font-weight: 400;
+    color: #6b7280;
+}

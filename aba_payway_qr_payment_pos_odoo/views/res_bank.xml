@@ -43,6 +43,23 @@
                             invisible="payway_environment != 'sandbox'"
                         />
 
+                        <field 
+                            name="uat_payway_merchant_id"
+                            string="Merchant ID"
+                            invisible="payway_environment != 'uat'"
+                        />
+                        <field 
+                            name="uat_payway_key"
+                            string="API Key"
+                            password="True"
+                            invisible="payway_environment != 'uat'"
+                        />
+                        <field
+                            name="uat_rsa_public_key"
+                            string="RSA Public Key"
+                            invisible="payway_environment != 'uat'"
+                        />
+
                     </group>
                     
                     <group>
@@ -54,6 +71,11 @@
                         <field 
                             name="bill_qr_lifetime" 
                             string="QR on Bill expire time (minutes)" 
+                            invisible="payway_environment == 'disable'"
+                        />
+                        <field
+                            name="payway_ssl_verify"
+                            string="Verify SSL Certificate"
                             invisible="payway_environment == 'disable'"
                         />
                     </group>

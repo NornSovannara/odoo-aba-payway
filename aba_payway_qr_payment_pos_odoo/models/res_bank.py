@@ -20,7 +20,7 @@ _logger = logging.getLogger(__name__)
 
 MAX_RETRY = 2
 
-def _make_payway_api_request(base_url: str, endpoint: str, payload: dict):
+def _make_payway_api_request(base_url: str, endpoint: str, payload: dict, verify: bool = True):
     url = urljoin(base_url, endpoint)
 
     retry_strategy = Retry(
@@ -39,8 +39,15 @@ def _make_payway_api_request(base_url: str, endpoint: str, payload: dict):
             "Making PayWay API request to %s with payload: %s", url, payload
         )
 
+        if not verify:
+            # Silence urllib3 warning when SSL verification is intentionally disabled
+            # for UAT/dev PayWay hosts using self-signed or internal-CA certificates.
+            requests.packages.urllib3.disable_warnings(
+                requests.packages.urllib3.exceptions.InsecureRequestWarning
+            )
+
         response = session.post(
-            url, json=payload, timeout=10, verify=True
+            url, json=payload, timeout=10, verify=verify
         )
         
         _logger.info(
@@ -58,6 +65,10 @@ def _make_payway_api_request(base_url: str, endpoint: str, payload: dict):
 
 class ResBank(models.Model):
     _inherit = "res.partner.bank"
+
+    # In-memory cache of PayWay checkout_qr_url keyed by tran_id.
+    # Populated when a QR is generated and read by pos.payment.method.payway_get_checkout_url.
+    _payway_checkout_url_cache = {}
 
     production_payway_merchant_id = fields.Char(
         string='Merchant ID',
@@ -89,12 +100,33 @@ class ResBank(models.Model):
         groups='base.group_system',
     )
 
+    uat_payway_merchant_id = fields.Char(
+        string='Merchant ID',
+        help='Enter your unique PayWay Merchant ID for the UAT environment.',
+    )
+    uat_payway_key = fields.Char(
+        string='API Key',
+        help='Enter your unique PayWay API Key for the UAT environment.',
+        groups='base.group_system',
+    )
+    uat_rsa_public_key = fields.Text(
+        string='RSA Public Key',
+        help='Enter your unique PayWay RSA Public Key for the UAT environment.',
+        groups='base.group_system',
+    )
+
     payway_environment = fields.Selection(
-        [('disable', 'Disable'), ('production', 'Production'), ('sandbox', 'Sandbox')],
+        [('disable', 'Disable'), ('production', 'Production'), ('uat', 'UAT'), ('sandbox', 'Sandbox')],
         string='Environment',
         default='disable',
         required=True,
-        help='Switch between Sandbox and Production payment environments for ABA PayWay.',
+        help='Switch between Sandbox, UAT and Production payment environments for ABA PayWay.',
+    )
+
+    payway_ssl_verify = fields.Boolean(
+        string='Verify SSL Certificate',
+        default=True,
+        help='Uncheck only for UAT/dev environments where PayWay uses a self-signed or internal-CA TLS certificate. Always keep this on for Production.',
     )
 
     digital_qr_lifetime = fields.Integer(
@@ -144,6 +176,12 @@ class ResBank(models.Model):
                 return _("Payway: For Production environment, the 'PayWay Merchant ID' is required.")
             if not self.sudo().production_payway_key:
                 return _("Payway: For Production environment, the 'PayWay API Key' is required.")
+
+        elif self.sudo().payway_environment == 'uat':
+            if not self.sudo().uat_payway_merchant_id:
+                return _("Payway: For UAT environment, the 'PayWay Merchant ID' is required.")
+            if not self.sudo().uat_payway_key:
+                return _("Payway: For UAT environment, the 'PayWay API Key' is required.")
 
         elif self.sudo().payway_environment == 'sandbox':
             if not self.sudo().sandbox_payway_merchant_id:
@@ -266,7 +304,8 @@ class ResBank(models.Model):
             )
         
             response = _make_payway_api_request(
-                api_url, '/api/payment-gateway/v1/payments/generate-qr', payload
+                api_url, '/api/payment-gateway/v1/payments/generate-qr', payload,
+                verify=self.sudo().payway_ssl_verify,
             )
 
             if str(response['status']['code']) not in ['0', '00']:
@@ -274,6 +313,14 @@ class ResBank(models.Model):
                 raise ValidationError(self._payway_construct_error_message(response))
 
             qr_type = self._context.get('qr_type')
+
+            # Cache the hosted checkout URL so the POS frontend can render it
+            # in an iframe when available (new UAT/prod QR-API-with-URL flow).
+            checkout_qr_url = response.get('checkout_qr_url')
+            qr_tran_id = self._context.get('qr_tran_id')
+            if checkout_qr_url and qr_tran_id:
+                self._payway_cache_checkout_url(qr_tran_id, checkout_qr_url)
+
             if qr_method == const.PAYMENT_METHODS_MAPPING['abapay_khqr'] and qr_type == const.POS_ORDER_QR_TYPE['bill']:
                 return response['qrImage']
             
@@ -311,7 +358,8 @@ class ResBank(models.Model):
             {'hash': self._payway_calculate_payment_secure_hash(api_key, payload, const.CHECK_TXN_SECURE_HASH_KEYS)}
         )
         response = _make_payway_api_request(
-            api_url, '/api/payment-gateway/v1/payments/close-transaction', payload
+            api_url, '/api/payment-gateway/v1/payments/close-transaction', payload,
+            verify=self.sudo().payway_ssl_verify,
         )
 
         if (
@@ -340,7 +388,8 @@ class ResBank(models.Model):
             {'hash': self._payway_calculate_payment_secure_hash(api_key, payload, const.CHECK_TXN_SECURE_HASH_KEYS)}
         )
         response = _make_payway_api_request(
-            api_url, '/api/payment-gateway/v1/payments/check-transaction-2', payload
+            api_url, '/api/payment-gateway/v1/payments/check-transaction-2', payload,
+            verify=self.sudo().payway_ssl_verify,
         )
 
         if str(response['status']['code']) == '00':
@@ -364,6 +413,14 @@ class ResBank(models.Model):
                 self.production_payway_merchant_id,
                 self.production_payway_key,
                 self.production_rsa_public_key,
+            )
+        elif self.payway_environment == 'uat':
+            api_url = const.API_URLS['uat']
+            return (
+                api_url,
+                self.uat_payway_merchant_id,
+                self.uat_payway_key,
+                self.uat_rsa_public_key,
             )
         elif self.payway_environment == 'sandbox':
             api_url = const.API_URLS['sandbox']
@@ -410,7 +467,8 @@ class ResBank(models.Model):
         )
 
         response = _make_payway_api_request(
-            api_url, '/api/merchant-portal/merchant-access/online-transaction/refund', payload
+            api_url, '/api/merchant-portal/merchant-access/online-transaction/refund', payload,
+            verify=self.sudo().payway_ssl_verify,
         )
 
         if str(response['status']['code']) == '00':
@@ -473,3 +531,41 @@ class ResBank(models.Model):
                 error_lines.append(f"- {fn}: {msg}")
 
         return f"{main_msg}\n" + "\n".join(error_lines)
+
+    # Bounded TTL cache for checkout_qr_url so the frontend can render the
+    # PayWay-hosted checkout page in an iframe without a second API round trip.
+    _PAYWAY_CHECKOUT_URL_TTL = 15 * 60  # seconds
+    _PAYWAY_CHECKOUT_URL_MAX = 1024
+
+    @classmethod
+    def _payway_cache_checkout_url(cls, qr_tran_id: str, checkout_url: str):
+        now = datetime.now().timestamp()
+        cache = cls._payway_checkout_url_cache
+        if len(cache) >= cls._PAYWAY_CHECKOUT_URL_MAX:
+            cutoff = now - cls._PAYWAY_CHECKOUT_URL_TTL
+            for k, (_url, ts) in list(cache.items()):
+                if ts < cutoff:
+                    cache.pop(k, None)
+        cache[qr_tran_id] = (checkout_url, now)
+
+    @classmethod
+    def _payway_peek_checkout_url(cls, qr_tran_id: str):
+        """Return the cached checkout URL without removing it."""
+        entry = cls._payway_checkout_url_cache.get(qr_tran_id)
+        if not entry:
+            return None
+        url, ts = entry
+        if datetime.now().timestamp() - ts > cls._PAYWAY_CHECKOUT_URL_TTL:
+            cls._payway_checkout_url_cache.pop(qr_tran_id, None)
+            return None
+        return url
+
+    @classmethod
+    def _payway_pop_checkout_url(cls, qr_tran_id: str):
+        entry = cls._payway_checkout_url_cache.pop(qr_tran_id, None)
+        if not entry:
+            return None
+        url, ts = entry
+        if datetime.now().timestamp() - ts > cls._PAYWAY_CHECKOUT_URL_TTL:
+            return None
+        return url
