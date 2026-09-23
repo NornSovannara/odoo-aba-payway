@@ -1,5 +1,11 @@
 secrets.toml
 
+# Odoo runtime data written into the mounted setup/etc folder
+setup/etc/filestore/
+setup/etc/sessions/
+setup/etc/odoo-server.log*
+setup/etc/addons/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

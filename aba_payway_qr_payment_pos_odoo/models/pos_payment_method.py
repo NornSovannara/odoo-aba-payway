@@ -227,6 +227,20 @@ class PosPaymentMethod(models.Model):
         is_payment_complete = str(response['data']['payment_status_code']) == '0'
         return is_payment_complete
 
+    def payway_get_checkout_url(self, qr_tran_id):
+        """Return the hosted PayWay checkout URL cached during QR generation.
+
+        The URL is only present in responses from the new QR-API-with-URL flow
+        (UAT / production). Returns False when unavailable so the frontend can
+        fall back to the legacy in-template QR rendering.
+        """
+        self.ensure_one()
+        if not qr_tran_id:
+            return False
+        if self.payment_method_type != 'qr_code' or self.qr_code_method not in const.PAYMENT_METHODS_CODES:
+            return False
+        return self.env['res.partner.bank']._payway_peek_checkout_url(qr_tran_id) or False
+
     def payway_refund_transaction(self, qr_tran_id, refund_amount):
         self.ensure_one()
         if self.payment_method_type != 'qr_code' or self.qr_code_method not in const.PAYMENT_METHODS_CODES:

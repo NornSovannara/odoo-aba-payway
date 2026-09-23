@@ -30,6 +30,8 @@ services:
     volumes:
       # - ./entrypoint.sh:/entrypoint.sh
       - ./addons:/mnt/extra-addons
+      - ../payment_aba_payway:/mnt/extra-addons/payment_aba_payway
+      - ../aba_payway_qr_payment_pos_odoo:/mnt/extra-addons/aba_payway_qr_payment_pos_odoo
       - ./etc:/etc/odoo
 
     depends_on:

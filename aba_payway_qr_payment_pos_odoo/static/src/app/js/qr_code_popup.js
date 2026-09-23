@@ -8,7 +8,7 @@ import { AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
 import { onMounted, onWillUnmount } from "@odoo/owl";
 import { PAYWAY_QR_CODE_METHOD } from "./const";
 
-const FIFTENNSEC = 15 * 1000;
+const POLL_INTERVAL_MS = 3 * 1000;
 const formatCurrency = registry.subRegistries.formatters.content.monetary[1];
 
 QRPopup.props = {
@@ -44,21 +44,44 @@ patch(QRPopup.prototype, {
             currency_name: this.props.order.currency.name,
             displayAmount: formatCurrency(this.props.line.amount || 0, false),
             merchantDisplayName: this.props.order.session.config_id.display_name,
+
+            paymentComplete: false,
         });
 
         this.intervalPollingTimer = null;
         this.pollingStartTime = null;
         this.countDownTimer = null;
+        this.successViewTimer = null;
 
         onMounted(() => {
             if (PAYWAY_QR_CODE_METHOD.includes(qrCodeMethod)) {
                 this._initializePaywayQRPayment();
+                this._loadPaywayCheckoutUrl();
             }
         });
 
         onWillUnmount(() => {
             this._clearAllPaymentTimers();
         });
+    },
+
+    async _loadPaywayCheckoutUrl() {
+        try {
+            const url = await this.orm.call("pos.payment.method", "payway_get_checkout_url", [
+                [this.props.line.payment_method_id.id],
+                this.props.line.transaction_id,
+            ]);
+            if (url) {
+                // Store on the payment line only: the CUSTOMER display embeds the
+                // iframe from this. The cashier keeps its own KHQR card layout.
+                const line = this.props.line;
+                if (line.qrPaymentData) {
+                    line.qrPaymentData = { ...line.qrPaymentData, checkoutUrl: url };
+                }
+            }
+        } catch {
+            // Silent fallback: the in-template QR card keeps rendering.
+        }
     },
 
     async _confirm() {
@@ -145,15 +168,28 @@ patch(QRPopup.prototype, {
         if (is_payment_complete) {
             this._clearAllPaymentTimers();
             this.paywayQRState.pollingInProgress = false;
-            return super._confirm();
+            this._showSuccessAndConfirm();
         }
+    },
+
+    _showSuccessAndConfirm() {
+        // Flag the payment line so Odoo's customer-display sync swaps the CUSTOMER
+        // screen to the Thank-you view, which latches there on its own side.
+        const line = this.props.line;
+        if (line?.qrPaymentData) {
+            line.qrPaymentData = { ...line.qrPaymentData, paymentComplete: true };
+        }
+        // Confirm immediately so the cashier reaches Odoo's payment success +
+        // receipt in sync with the customer screen (no artificial hold).
+        super._confirm();
     },
 
     _startPaymentPollingVerification() {
 
         this.paywayQRState.pollingInProgress = true;
 
-        // Every 15 seconds, verify the payment status
+        // Poll the payment status frequently so the customer-display Thank-you
+        // flips close to ABA's own success animation.
         this.intervalPollingTimer = setInterval(() => {
             const elapsedTime = Date.now() - this.pollingStartTime;
             const qrLifetime = this.paywayQRState.DigitalQrLifetime * 60 * 1000;
@@ -168,7 +204,7 @@ patch(QRPopup.prototype, {
                 super._cancel();
             }
 
-        }, FIFTENNSEC);
+        }, POLL_INTERVAL_MS);
     },
 
     _startPaymentCountDown(duration) {
@@ -203,6 +239,10 @@ patch(QRPopup.prototype, {
         if (this.countDownTimer) {
             clearInterval(this.countDownTimer);
             this.countDownTimer = null;
+        }
+        if (this.successViewTimer) {
+            clearTimeout(this.successViewTimer);
+            this.successViewTimer = null;
         }
     },
 
