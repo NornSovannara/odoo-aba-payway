@@ -9,6 +9,7 @@ from odoo.addons.aba_payway_qr_payment_pos_odoo import const
 
 _logger = logging.getLogger(__name__)
 
+
 class PayWayController(http.Controller):
     _webhook_url = '/pos/payway/webhook'
 
@@ -17,9 +18,9 @@ class PayWayController(http.Controller):
 
         try:
             data = request.get_json_data()
-            _logger.info("Notification received from PayWay with data:\n%s", pprint.pformat(data))        
+            _logger.info("Notification received from PayWay with data:\n%s", pprint.pformat(data))
             channel_name = 'pos.order.payment.payway.' + data['tran_id']
-            
+
             payment_method = request.env['pos.payment.method'].sudo().search([
                 ('qr_code_method', 'in', list(const.PAYMENT_METHODS_CODES))
             ], limit=1)
@@ -35,14 +36,13 @@ class PayWayController(http.Controller):
                 {
                     **data,
                     "channel_name": channel_name
-                },  
+                },
             )
 
         except Exception:
             _logger.exception("Unable to handle the webhook data.")
 
         return "OK"
-
 
     @staticmethod
     def _verify_notification_signature(notification_data, received_signature, bank_account):
@@ -57,7 +57,7 @@ class PayWayController(http.Controller):
         if not received_signature:
             _logger.warning("Received notification with missing signature.")
             raise Forbidden()
-        
+
         _, _, api_key, _ = bank_account._payway_get_api_cred()
         expected_signature = bank_account._payway_calculate_webhook_secure_hash(api_key, notification_data)
         if (
