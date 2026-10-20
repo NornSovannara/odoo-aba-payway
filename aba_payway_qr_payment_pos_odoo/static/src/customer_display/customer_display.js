@@ -199,7 +199,9 @@ patch(CustomerDisplay.prototype, {
                 // qrPaymentData the instant the cashier confirms, so without this the
                 // customer snaps back to the native end screen. The iframe keeps
                 // playing ABA's success; this persists until a new order begins.
-                if (finalized && paywayActive) {
+                // Only latch while there is NO new QR data — a fresh payment's
+                // qrPaymentData must always fall through and rebuild the overlay.
+                if (!qrPaymentData && finalized && paywayActive) {
                     showThankYou();
                     return;
                 }

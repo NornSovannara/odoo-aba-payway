@@ -66,10 +66,6 @@ def _make_payway_api_request(base_url: str, endpoint: str, payload: dict, verify
 class ResBank(models.Model):
     _inherit = "res.partner.bank"
 
-    # In-memory cache of PayWay checkout_qr_url keyed by tran_id.
-    # Populated when a QR is generated and read by pos.payment.method.payway_get_checkout_url.
-    _payway_checkout_url_cache = {}
-
     production_payway_merchant_id = fields.Char(
         string='Merchant ID',
         help="Enter your production PayWay Merchant ID. You'll receive this by email after obtaining a Go Live approval from ABA PayWay.",
@@ -532,40 +528,73 @@ class ResBank(models.Model):
 
         return f"{main_msg}\n" + "\n".join(error_lines)
 
-    # Bounded TTL cache for checkout_qr_url so the frontend can render the
-    # PayWay-hosted checkout page in an iframe without a second API round trip.
+    # DB-backed store for checkout_qr_url so any Odoo worker/node can read what
+    # another one wrote during QR generation (an in-memory dict is per-process
+    # and misses behind multiple workers). Keyed by tran_id, TTL-bound.
     _PAYWAY_CHECKOUT_URL_TTL = 15 * 60  # seconds
-    _PAYWAY_CHECKOUT_URL_MAX = 1024
+    _PAYWAY_CHECKOUT_URL_PARAM_PREFIX = 'aba_payway.checkout_url.'
 
-    @classmethod
-    def _payway_cache_checkout_url(cls, qr_tran_id: str, checkout_url: str):
+    @api.model
+    def _payway_cache_checkout_url(self, qr_tran_id: str, checkout_url: str):
+        if not qr_tran_id or not checkout_url:
+            return
         now = datetime.now().timestamp()
-        cache = cls._payway_checkout_url_cache
-        if len(cache) >= cls._PAYWAY_CHECKOUT_URL_MAX:
-            cutoff = now - cls._PAYWAY_CHECKOUT_URL_TTL
-            for k, (_url, ts) in list(cache.items()):
-                if ts < cutoff:
-                    cache.pop(k, None)
-        cache[qr_tran_id] = (checkout_url, now)
+        icp = self.env['ir.config_parameter'].sudo()
+        icp.set_param(
+            f"{self._PAYWAY_CHECKOUT_URL_PARAM_PREFIX}{qr_tran_id}",
+            f"{now}|{checkout_url}",
+        )
+        self._payway_cleanup_checkout_urls()
 
-    @classmethod
-    def _payway_peek_checkout_url(cls, qr_tran_id: str):
-        """Return the cached checkout URL without removing it."""
-        entry = cls._payway_checkout_url_cache.get(qr_tran_id)
-        if not entry:
+    @api.model
+    def _payway_peek_checkout_url(self, qr_tran_id: str):
+        """Return the stored checkout URL without removing it."""
+        if not qr_tran_id:
             return None
-        url, ts = entry
-        if datetime.now().timestamp() - ts > cls._PAYWAY_CHECKOUT_URL_TTL:
-            cls._payway_checkout_url_cache.pop(qr_tran_id, None)
+        key = f"{self._PAYWAY_CHECKOUT_URL_PARAM_PREFIX}{qr_tran_id}"
+        icp = self.env['ir.config_parameter'].sudo()
+        # Read via search (not get_param) to bypass get_param's per-process
+        # ormcache, which can hide a value just written by another worker/node.
+        param = icp.search([('key', '=', key)], limit=1)
+        raw = param.value if param else None
+        if not raw:
             return None
+        ts_str, _sep, url = raw.partition('|')
+        try:
+            ts = float(ts_str)
+        except ValueError:
+            return None
+        if datetime.now().timestamp() - ts > self._PAYWAY_CHECKOUT_URL_TTL:
+            param.unlink()
+            return None
+        return url or None
+
+    @api.model
+    def _payway_pop_checkout_url(self, qr_tran_id: str):
+        url = self._payway_peek_checkout_url(qr_tran_id)
+        if url:
+            key = f"{self._PAYWAY_CHECKOUT_URL_PARAM_PREFIX}{qr_tran_id}"
+            self.env['ir.config_parameter'].sudo().search(
+                [('key', '=', key)], limit=1
+            ).unlink()
         return url
 
-    @classmethod
-    def _payway_pop_checkout_url(cls, qr_tran_id: str):
-        entry = cls._payway_checkout_url_cache.pop(qr_tran_id, None)
-        if not entry:
-            return None
-        url, ts = entry
-        if datetime.now().timestamp() - ts > cls._PAYWAY_CHECKOUT_URL_TTL:
-            return None
-        return url
+    @api.model
+    def _payway_cleanup_checkout_urls(self):
+        """Drop expired checkout-URL params so the store stays bounded."""
+        cutoff = datetime.now().timestamp() - self._PAYWAY_CHECKOUT_URL_TTL
+        icp = self.env['ir.config_parameter'].sudo()
+        params = icp.search(
+            [('key', '=like', f"{self._PAYWAY_CHECKOUT_URL_PARAM_PREFIX}%")]
+        )
+        stale_ids = []
+        for rec in params:
+            ts_str, _sep, _url = (rec.value or '').partition('|')
+            try:
+                ts = float(ts_str)
+            except ValueError:
+                ts = 0.0
+            if ts < cutoff:
+                stale_ids.append(rec.id)
+        if stale_ids:
+            icp.browse(stale_ids).unlink()
