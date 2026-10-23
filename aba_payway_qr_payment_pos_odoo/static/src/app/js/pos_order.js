@@ -16,7 +16,10 @@ patch(PosOrder.prototype, {
             data.qrPaymentData.qrCodeMethod = selectedPaymentLine.payment_method_id.qr_code_method || '';
             data.qrPaymentData.currency_name = this.currency.name;
             data.qrPaymentData.displayAmount = formatCurrency(this.get_total_with_tax() || 0, false);
-            data.qrPaymentData.merchantDisplayName = this.session.config_id.display_name;
+            // Prefer PayWay's outlet name (matches the hosted QR page); fall back
+            // to the POS config name until it's fetched.
+            data.qrPaymentData.merchantDisplayName =
+                selectedPaymentLine.qrPaymentData.merchantDisplayName || this.session.config_id.display_name;
             // Carry the ABA-hosted checkout URL + payment state so the customer
             // display can embed the iframe and swap to the success view.
             data.qrPaymentData.checkoutUrl = selectedPaymentLine.qrPaymentData.checkoutUrl || null;

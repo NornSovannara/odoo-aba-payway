@@ -241,6 +241,16 @@ class PosPaymentMethod(models.Model):
             return False
         return self.env['res.partner.bank']._payway_peek_checkout_url(qr_tran_id) or False
 
+    def payway_get_outlet_name(self, qr_tran_id):
+        """Return PayWay's merchant/outlet name cached during QR generation, so
+        the cashier card can show the same name as the hosted QR page."""
+        self.ensure_one()
+        if not qr_tran_id:
+            return False
+        if self.payment_method_type != 'qr_code' or self.qr_code_method not in const.PAYMENT_METHODS_CODES:
+            return False
+        return self.env['res.partner.bank']._payway_peek_qr_merchant(qr_tran_id) or False
+
     def payway_refund_transaction(self, qr_tran_id, refund_amount):
         self.ensure_one()
         if self.payment_method_type != 'qr_code' or self.qr_code_method not in const.PAYMENT_METHODS_CODES:

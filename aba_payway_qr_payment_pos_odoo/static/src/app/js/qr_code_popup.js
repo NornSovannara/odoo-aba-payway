@@ -57,6 +57,7 @@ patch(QRPopup.prototype, {
             if (PAYWAY_QR_CODE_METHOD.includes(qrCodeMethod)) {
                 this._initializePaywayQRPayment();
                 this._loadPaywayCheckoutUrl();
+                this._loadPaywayOutletName();
             }
         });
 
@@ -81,6 +82,26 @@ patch(QRPopup.prototype, {
             }
         } catch {
             // Silent fallback: the in-template QR card keeps rendering.
+        }
+    },
+
+    async _loadPaywayOutletName() {
+        try {
+            const name = await this.orm.call("pos.payment.method", "payway_get_outlet_name", [
+                [this.props.line.payment_method_id.id],
+                this.props.line.transaction_id,
+            ]);
+            if (name) {
+                // Show PayWay's outlet name on the cashier card (matches the
+                // hosted QR page) and feed the customer fallback card.
+                this.paywayQRState.merchantDisplayName = name;
+                const line = this.props.line;
+                if (line.qrPaymentData) {
+                    line.qrPaymentData = { ...line.qrPaymentData, merchantDisplayName: name };
+                }
+            }
+        } catch {
+            // Keep the POS config name fallback.
         }
     },
 
