@@ -289,7 +289,29 @@ class ResBank(models.Model):
     ):
         
         if qr_method in const.PAYMENT_METHODS_CODES:
-            
+
+            qr_type = self._context.get('qr_type')
+            qr_tran_id = self._context.get('qr_tran_id')
+            is_khqr_bill = (
+                qr_method == const.PAYMENT_METHODS_MAPPING['abapay_khqr']
+                and qr_type == const.POS_ORDER_QR_TYPE['bill']
+            )
+
+            # Reuse a single PayWay generation per tran_id: the bill and the
+            # on-screen QR must share ONE QR. A second generate-qr for the same
+            # tran_id supersedes the first on PayWay's side, so the earlier QR
+            # (e.g. a printed bill) would fail on scan.
+            cached = self._payway_peek_qr_result(qr_tran_id, amount) if qr_tran_id else None
+            if cached:
+                if is_khqr_bill:
+                    return cached.get('qr_image') or ''
+                return {
+                    'barcode_type': 'QR',
+                    'width': 150,
+                    'height': 150,
+                    'value': cached.get('qr_string') or '',
+                }
+
             api_url, payload = self._get_qr_vals(
                 qr_method,
                 amount,
@@ -308,16 +330,30 @@ class ResBank(models.Model):
                 # Payway return error
                 raise ValidationError(self._payway_construct_error_message(response))
 
-            qr_type = self._context.get('qr_type')
-
             # Cache the hosted checkout URL so the POS frontend can render it
             # in an iframe when available (new UAT/prod QR-API-with-URL flow).
             checkout_qr_url = response.get('checkout_qr_url')
-            qr_tran_id = self._context.get('qr_tran_id')
             if checkout_qr_url and qr_tran_id:
                 self._payway_cache_checkout_url(qr_tran_id, checkout_qr_url)
 
-            if qr_method == const.PAYMENT_METHODS_MAPPING['abapay_khqr'] and qr_type == const.POS_ORDER_QR_TYPE['bill']:
+            # Cache this generation so the other surface (bill/screen) reuses it
+            # instead of calling generate-qr again. Use the longer bill lifetime
+            # for the printed bill so it stays valid long enough.
+            if qr_tran_id:
+                lifetime_min = (
+                    self.bill_qr_lifetime
+                    if qr_type == const.POS_ORDER_QR_TYPE['bill']
+                    else self.digital_qr_lifetime
+                )
+                self._payway_cache_qr_result(
+                    qr_tran_id,
+                    response.get('qrString'),
+                    response.get('qrImage'),
+                    amount,
+                    (lifetime_min or 0) * 60,
+                )
+
+            if is_khqr_bill:
                 return response['qrImage']
             
             else:
@@ -595,6 +631,69 @@ class ResBank(models.Model):
             except ValueError:
                 ts = 0.0
             if ts < cutoff:
+                stale_ids.append(rec.id)
+        if stale_ids:
+            icp.browse(stale_ids).unlink()
+
+    # DB-backed store of the full generate-qr result (qrString + qrImage) keyed
+    # by tran_id, so the bill and the on-screen QR share ONE PayWay generation.
+    # A second generate-qr for the same tran_id would supersede the first on
+    # PayWay's side and make the earlier QR (e.g. a printed bill) fail on scan.
+    _PAYWAY_QR_RESULT_PARAM_PREFIX = 'aba_payway.qr_result.'
+
+    @api.model
+    def _payway_cache_qr_result(self, qr_tran_id, qr_string, qr_image, amount, lifetime_seconds):
+        if not qr_tran_id:
+            return
+        expiry = datetime.now().timestamp() + max(lifetime_seconds or 0, 0)
+        icp = self.env['ir.config_parameter'].sudo()
+        icp.set_param(
+            f"{self._PAYWAY_QR_RESULT_PARAM_PREFIX}{qr_tran_id}",
+            json.dumps({
+                'qr_string': qr_string or '',
+                'qr_image': qr_image or '',
+                'amount': amount,
+                'expiry': expiry,
+            }),
+        )
+        self._payway_cleanup_qr_results()
+
+    @api.model
+    def _payway_peek_qr_result(self, qr_tran_id, amount):
+        """Return the cached generation for this tran_id+amount, else None."""
+        if not qr_tran_id:
+            return None
+        key = f"{self._PAYWAY_QR_RESULT_PARAM_PREFIX}{qr_tran_id}"
+        icp = self.env['ir.config_parameter'].sudo()
+        param = icp.search([('key', '=', key)], limit=1)
+        if not param:
+            return None
+        try:
+            data = json.loads(param.value or '{}')
+        except ValueError:
+            return None
+        # Expired, or the amount changed (a new amount must get a fresh QR).
+        if datetime.now().timestamp() > data.get('expiry', 0) or \
+                abs((data.get('amount') or 0) - (amount or 0)) > 0.001:
+            param.unlink()
+            return None
+        return data
+
+    @api.model
+    def _payway_cleanup_qr_results(self):
+        """Drop expired generate-qr results so the store stays bounded."""
+        now = datetime.now().timestamp()
+        icp = self.env['ir.config_parameter'].sudo()
+        params = icp.search(
+            [('key', '=like', f"{self._PAYWAY_QR_RESULT_PARAM_PREFIX}%")]
+        )
+        stale_ids = []
+        for rec in params:
+            try:
+                data = json.loads(rec.value or '{}')
+            except ValueError:
+                data = {}
+            if now > data.get('expiry', 0):
                 stale_ids.append(rec.id)
         if stale_ids:
             icp.browse(stale_ids).unlink()
