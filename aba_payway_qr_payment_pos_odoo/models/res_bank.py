@@ -704,6 +704,16 @@ class ResBank(models.Model):
         return data.get('merchant_name') or None
 
     @api.model
+    def _payway_pop_qr_result(self, qr_tran_id):
+        """Delete the cached generate-qr result for this tran_id (e.g. on cancel)."""
+        if not qr_tran_id:
+            return
+        key = f"{self._PAYWAY_QR_RESULT_PARAM_PREFIX}{qr_tran_id}"
+        self.env['ir.config_parameter'].sudo().search(
+            [('key', '=', key)], limit=1
+        ).unlink()
+
+    @api.model
     def _payway_cleanup_qr_results(self):
         """Drop expired generate-qr results so the store stays bounded."""
         now = datetime.now().timestamp()

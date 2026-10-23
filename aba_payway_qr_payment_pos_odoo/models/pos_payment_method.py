@@ -212,6 +212,11 @@ class PosPaymentMethod(models.Model):
 
         payment_bank = self.journal_id.bank_account_id
         payment_bank._payway_api_close_transaction(qr_tran_id)
+        # Drop cached QR/checkout data for the closed tran_id so a Retry can't
+        # reuse the cancelled (now expired) QR.
+        bank_model = self.env['res.partner.bank']
+        bank_model._payway_pop_qr_result(qr_tran_id)
+        bank_model._payway_pop_checkout_url(qr_tran_id)
 
     def payway_verify_transaction(
         self,

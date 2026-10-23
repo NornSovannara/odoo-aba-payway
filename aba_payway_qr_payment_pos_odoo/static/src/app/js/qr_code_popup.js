@@ -145,8 +145,9 @@ patch(QRPopup.prototype, {
 
     async _cancel() {
 
+        const isPayway = PAYWAY_QR_CODE_METHOD.includes(this.paywayQRState.qrCodeMethod);
         try {
-            if (PAYWAY_QR_CODE_METHOD.includes(this.paywayQRState.qrCodeMethod)) {
+            if (isPayway) {
                 await this.orm.call("pos.payment.method", "payway_cancel_transaction", [
                     [this.props.line.payment_method_id.id],
                     this.props.line.transaction_id,
@@ -154,6 +155,12 @@ patch(QRPopup.prototype, {
             };
         }
         catch { }
+
+        if (isPayway) {
+            // Drop the closed tran_id so a Retry generates a FRESH QR instead of
+            // reusing the cancelled transaction, which PayWay reports as expired.
+            this.props.line.transaction_id = null;
+        }
 
         this._clearAllPaymentTimers();
         super._cancel();
