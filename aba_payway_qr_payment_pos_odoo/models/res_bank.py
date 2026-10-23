@@ -345,10 +345,15 @@ class ResBank(models.Model):
                     if qr_type == const.POS_ORDER_QR_TYPE['bill']
                     else self.digital_qr_lifetime
                 )
+                # PayWay's merchant/outlet name (KHQR uses outlet_name, Alipay/
+                # WeChat use merchant_name) so the cashier card can match the
+                # name shown on the hosted QR page.
+                merchant_name = response.get('outlet_name') or response.get('merchant_name') or ''
                 self._payway_cache_qr_result(
                     qr_tran_id,
                     response.get('qrString'),
                     response.get('qrImage'),
+                    merchant_name,
                     amount,
                     (lifetime_min or 0) * 60,
                 )
@@ -642,7 +647,7 @@ class ResBank(models.Model):
     _PAYWAY_QR_RESULT_PARAM_PREFIX = 'aba_payway.qr_result.'
 
     @api.model
-    def _payway_cache_qr_result(self, qr_tran_id, qr_string, qr_image, amount, lifetime_seconds):
+    def _payway_cache_qr_result(self, qr_tran_id, qr_string, qr_image, merchant_name, amount, lifetime_seconds):
         if not qr_tran_id:
             return
         expiry = datetime.now().timestamp() + max(lifetime_seconds or 0, 0)
@@ -652,6 +657,7 @@ class ResBank(models.Model):
             json.dumps({
                 'qr_string': qr_string or '',
                 'qr_image': qr_image or '',
+                'merchant_name': merchant_name or '',
                 'amount': amount,
                 'expiry': expiry,
             }),
@@ -678,6 +684,24 @@ class ResBank(models.Model):
             param.unlink()
             return None
         return data
+
+    @api.model
+    def _payway_peek_qr_merchant(self, qr_tran_id):
+        """Return the PayWay merchant/outlet name cached for this tran_id."""
+        if not qr_tran_id:
+            return None
+        key = f"{self._PAYWAY_QR_RESULT_PARAM_PREFIX}{qr_tran_id}"
+        icp = self.env['ir.config_parameter'].sudo()
+        param = icp.search([('key', '=', key)], limit=1)
+        if not param:
+            return None
+        try:
+            data = json.loads(param.value or '{}')
+        except ValueError:
+            return None
+        if datetime.now().timestamp() > data.get('expiry', 0):
+            return None
+        return data.get('merchant_name') or None
 
     @api.model
     def _payway_cleanup_qr_results(self):
