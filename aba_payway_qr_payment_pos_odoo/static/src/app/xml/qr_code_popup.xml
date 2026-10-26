@@ -30,6 +30,14 @@
                 || paywayQRState.qrCodeMethod === 'wechat' 
                 || paywayQRState.qrCodeMethod === 'alipay'"
             >
+                <!-- Both scenarios show this briefly until the first status check returns. -->
+                <div t-if="paywayQRState.verifying" class="mt-2 text-center">
+                    <p>
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
+                        Verifying payment...
+                    </p>
+                </div>
+                <t t-else="">
                 <!-- Primary: ABA-hosted page in an iframe (same as customer screen). -->
                 <div t-if="paywayQRState.checkoutUrl"
                      t-att-class="paywayQRState.paymentComplete ? 'd-none' : ''">
@@ -174,6 +182,7 @@
                     </div>
                     <p class="payment-scan-desc">Scan with WeChat app</p>
                 </div>
+                </t>
                 </t>
             </t>
         </xpath>
