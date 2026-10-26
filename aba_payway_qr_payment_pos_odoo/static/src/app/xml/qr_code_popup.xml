@@ -30,7 +30,20 @@
                 || paywayQRState.qrCodeMethod === 'wechat' 
                 || paywayQRState.qrCodeMethod === 'alipay'"
             >
-                
+                <!-- Primary: ABA-hosted page in an iframe (same as customer screen). -->
+                <div t-if="paywayQRState.checkoutUrl"
+                     t-att-class="paywayQRState.paymentComplete ? 'd-none' : ''">
+                    <div class="payway-cashier-iframe-wrap">
+                        <iframe class="payway-cashier-iframe"
+                                t-att-src="paywayQRState.checkoutUrl"
+                                frameborder="0" allow="clipboard-write" title="ABA PayWay QR"/>
+                    </div>
+                    <p t-if="paywayQRState.qrCodeMethod === 'abapay_khqr'" class="payment-scan-desc khqr">Scan with ABA Mobile or any KHQR supported banking app</p>
+                    <p t-elif="paywayQRState.qrCodeMethod === 'alipay'" class="payment-scan-desc">Scan with Alipay app</p>
+                    <p t-elif="paywayQRState.qrCodeMethod === 'wechat'" class="payment-scan-desc">Scan with WeChat app</p>
+                </div>
+                <!-- Fallback: our custom card when no checkout URL is available. -->
+                <t t-else="">
                 <div t-if="paywayQRState.qrCodeMethod === 'abapay_khqr'"
                      t-att-class="paywayQRState.paymentComplete ? 'd-none' : ''"> 
                     <img t-att-src="'/aba_payway_qr_payment_pos_odoo/static/src/img/aba-pay.svg'" alt="ABA Pay Logo" />
@@ -161,6 +174,7 @@
                     </div>
                     <p class="payment-scan-desc">Scan with WeChat app</p>
                 </div>
+                </t>
             </t>
         </xpath>
 

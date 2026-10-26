@@ -45,6 +45,7 @@ patch(QRPopup.prototype, {
             displayAmount: formatCurrency(this.props.line.amount || 0, false),
             merchantDisplayName: this.props.order.session.config_id.display_name,
 
+            checkoutUrl: null,
             paymentComplete: false,
         });
 
@@ -73,8 +74,9 @@ patch(QRPopup.prototype, {
                 this.props.line.transaction_id,
             ]);
             if (url) {
-                // Store on the payment line only: the CUSTOMER display embeds the
-                // iframe from this. The cashier keeps its own KHQR card layout.
+                // Render the ABA-hosted page in an iframe on the cashier card
+                // (same as the customer screen) and feed the customer display.
+                this.paywayQRState.checkoutUrl = url;
                 const line = this.props.line;
                 if (line.qrPaymentData) {
                     line.qrPaymentData = { ...line.qrPaymentData, checkoutUrl: url };

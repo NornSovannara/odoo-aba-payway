@@ -184,6 +184,37 @@
     display: block;
 }
 
+// Cashier popup: the ABA-hosted page embedded in the QR dialog.
+// The page is rendered at full size inside the iframe, then the wrapper
+// scales it down (centered) so the whole page fits with no inner scrollbar.
+.payway-cashier-iframe-wrap {
+    width: 440px;
+    height: 472px;
+    max-width: 100%;
+    margin: 0 auto;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+}
+
+.payway-cashier-iframe {
+    width: 550px;
+    height: 590px;
+    flex: 0 0 auto;
+    border: 0;
+    background: #ffffff;
+    display: block;
+    transform: scale(0.8);
+    transform-origin: top center;
+}
+
+// Center the scan description text (it can wrap to two lines).
+.payway-cashier-iframe-wrap ~ .payment-scan-desc {
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
+}
+
 // Post-payment: the ABA page keeps playing its animation on the left; cover the
 // right-side order items with a plain Thank-you message (+ Powered by footer).
 .payway-cd-thankyou-panel {
@@ -304,22 +335,6 @@ body:has(.payway-cd-overlay-panel) .o_customer_display_orderline.selected {
     outline: 0 !important;
     box-shadow: none !important;
     background: transparent !important;
-}
-
-// Cashier popup: embed the ABA-hosted QR page in the modal (portrait layout).
-.payway-cashier-iframe-wrap {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-}
-
-.payway-cashier-iframe {
-    width: 380px;
-    max-width: 90vw;
-    height: 620px;
-    max-height: 75vh;
-    border: 0;
-    background: #ffffff;
 }
 
 // Cashier popup: post-payment success view (shown for 5s before order validates)
