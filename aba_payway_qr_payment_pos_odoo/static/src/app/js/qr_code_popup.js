@@ -47,6 +47,7 @@ patch(QRPopup.prototype, {
 
             checkoutUrl: null,
             paymentComplete: false,
+            verifying: true,
         });
 
         this.intervalPollingTimer = null;
@@ -57,6 +58,8 @@ patch(QRPopup.prototype, {
         onMounted(() => {
             if (PAYWAY_QR_CODE_METHOD.includes(qrCodeMethod)) {
                 this._initializePaywayQRPayment();
+                // Load in parallel (fast DB read) so the CUSTOMER display gets the
+                // iframe immediately, independent of the cashier's verify gate.
                 this._loadPaywayCheckoutUrl();
                 this._loadPaywayOutletName();
             }
@@ -172,6 +175,18 @@ patch(QRPopup.prototype, {
         try {
             this._startPaymentCountDown(this.paywayQRState.DigitalQrLifetime * 60);
             this.pollingStartTime = Date.now();
+
+            // Verify once up front so the CASHIER shows a brief "Verifying..." and,
+            // if the bill QR was already paid before this screen opened, jumps
+            // straight to success without flashing a fresh QR on the cashier.
+            this.paywayQRState.pollingInProgress = true;
+            await this._verifyQrPaymentStatus();
+            if (!this.paywayQRState.pollingInProgress) {
+                return;
+            }
+
+            // Still unpaid: reveal the cashier QR iframe and keep polling.
+            this.paywayQRState.verifying = false;
             this._startPaymentPollingVerification();
 
         } catch (error) {
