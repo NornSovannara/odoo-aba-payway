@@ -144,6 +144,7 @@ patch(CustomerDisplay.prototype, {
         let thankYouEl = null;
         let thankYouTimer = null;
         let currentIframeUrl = null;
+        let paywayActive = false;
         let paywayPaid = false;
         let completedLatched = false;
 
@@ -210,11 +211,14 @@ patch(CustomerDisplay.prototype, {
                 if (completedLatched && !finalized) {
                     completedLatched = false;
                     paywayPaid = false;
+                    paywayActive = false;
                     removeOverlay();
                 }
-                // Completion latch: a PayWay QR payment finished for this order. Keep
-                // the Thank-you (and any live iframe) on screen until that new order.
-                else if (paywayPaid && !qrPaymentData) {
+                // Completion latch: the payment completed (survives the finalize gap
+                // and the Retry churn) OR the order finalized after a PayWay QR was
+                // shown (reliable even if the paymentComplete tick was never synced).
+                // Keep the Thank-you (and any live iframe) until a new order begins.
+                else if (!qrPaymentData && (paywayPaid || (finalized && paywayActive))) {
                     completedLatched = true;
                     showThankYou();
                     return;
@@ -230,6 +234,7 @@ patch(CustomerDisplay.prototype, {
                     overlayEl &&
                     currentIframeUrl === qrPaymentData.checkoutUrl
                 ) {
+                    paywayActive = true;
                     if (qrPaymentData.paymentComplete) {
                         showThankYou();
                     }
@@ -243,11 +248,13 @@ patch(CustomerDisplay.prototype, {
                 removeOverlay();
 
                 if (!qrPaymentData) {
-                    // New/empty order → clean up.
+                    // Genuine empty/cancelled order (not a completion) → clean up.
+                    paywayActive = false;
                     return;
                 }
 
                 if (isPaywayMethod) {
+                    paywayActive = true;
                     overlayEl = document.createElement("div");
                     overlayEl.className = "payway-cd-overlay-panel";
                     if (qrPaymentData.checkoutUrl) {
@@ -286,6 +293,7 @@ patch(CustomerDisplay.prototype, {
                     return;
                 }
 
+                paywayActive = false;
                 currentDialogCloseFn = this.dialog.add(CustomerFacingQR, qrPaymentData, {
                     onClose: () => {
                         currentDialogCloseFn = null;
