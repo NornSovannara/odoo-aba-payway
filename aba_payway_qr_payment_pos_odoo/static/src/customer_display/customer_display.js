@@ -144,7 +144,8 @@ patch(CustomerDisplay.prototype, {
         let thankYouEl = null;
         let thankYouTimer = null;
         let currentIframeUrl = null;
-        let paywayActive = false;
+        let paywayPaid = false;
+        let completedLatched = false;
 
         const removeOverlay = () => {
             if (thankYouTimer) {
@@ -194,14 +195,27 @@ patch(CustomerDisplay.prototype, {
                     !!qrPaymentData &&
                     PAYWAY_QR_CODE_METHOD.includes(qrPaymentData.qrCodeMethod);
 
-                // Final-screen latch: once the order is finalized after a PayWay QR
-                // flow, keep our success + Thank-you on screen. Base Odoo nulls
-                // qrPaymentData the instant the cashier confirms, so without this the
-                // customer snaps back to the native end screen. The iframe keeps
-                // playing ABA's success; this persists until a new order begins.
-                // Only latch while there is NO new QR data — a fresh payment's
-                // qrPaymentData must always fall through and rebuild the overlay.
-                if (!qrPaymentData && finalized && paywayActive) {
+                // Remember a completed PayWay payment. Base Odoo nulls qrPaymentData
+                // the instant the popup closes (on BOTH confirm and cancel), while
+                // `finalized` flips true separately during validation. On success
+                // that leaves a transient (qrPaymentData=null, finalized=false) tick
+                // that must NOT tear down the Thank-you. Tracking the completion
+                // itself keeps the latch alive across that gap and the Retry churn.
+                if (qrPaymentData?.paymentComplete) {
+                    paywayPaid = true;
+                }
+
+                // A new order has begun after a completed PayWay order (finalized
+                // cleared) -> drop the latch and fall through to render it.
+                if (completedLatched && !finalized) {
+                    completedLatched = false;
+                    paywayPaid = false;
+                    removeOverlay();
+                }
+                // Completion latch: a PayWay QR payment finished for this order. Keep
+                // the Thank-you (and any live iframe) on screen until that new order.
+                else if (paywayPaid && !qrPaymentData) {
+                    completedLatched = true;
                     showThankYou();
                     return;
                 }
@@ -216,7 +230,6 @@ patch(CustomerDisplay.prototype, {
                     overlayEl &&
                     currentIframeUrl === qrPaymentData.checkoutUrl
                 ) {
-                    paywayActive = true;
                     if (qrPaymentData.paymentComplete) {
                         showThankYou();
                     }
@@ -230,13 +243,11 @@ patch(CustomerDisplay.prototype, {
                 removeOverlay();
 
                 if (!qrPaymentData) {
-                    // New/empty order → drop the latch and clean up.
-                    paywayActive = false;
+                    // New/empty order → clean up.
                     return;
                 }
 
                 if (isPaywayMethod) {
-                    paywayActive = true;
                     overlayEl = document.createElement("div");
                     overlayEl.className = "payway-cd-overlay-panel";
                     if (qrPaymentData.checkoutUrl) {
@@ -275,7 +286,6 @@ patch(CustomerDisplay.prototype, {
                     return;
                 }
 
-                paywayActive = false;
                 currentDialogCloseFn = this.dialog.add(CustomerFacingQR, qrPaymentData, {
                     onClose: () => {
                         currentDialogCloseFn = null;
