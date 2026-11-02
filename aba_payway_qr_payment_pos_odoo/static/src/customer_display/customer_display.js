@@ -196,6 +196,19 @@ patch(CustomerDisplay.prototype, {
                     !!qrPaymentData &&
                     PAYWAY_QR_CODE_METHOD.includes(qrPaymentData.qrCodeMethod);
 
+                // TEMP diagnostic: trace the customer-display effect ticks.
+                console.log("[PAYWAY-CD]", JSON.stringify({
+                    hasQr: !!qrPaymentData,
+                    method: qrPaymentData?.qrCodeMethod,
+                    checkoutUrl: qrPaymentData?.checkoutUrl,
+                    paymentComplete: qrPaymentData?.paymentComplete,
+                    finalized,
+                    currentIframeUrl,
+                    hasOverlay: !!overlayEl,
+                    paywayPaid,
+                    completedLatched,
+                }));
+
                 // Remember a completed PayWay payment. Base Odoo nulls qrPaymentData
                 // the instant the popup closes (on BOTH confirm and cancel), while
                 // `finalized` flips true separately during validation. On success
@@ -263,6 +276,7 @@ patch(CustomerDisplay.prototype, {
                         overlayEl.classList.add("payway-cd-overlay-panel--iframe");
                         overlayEl.innerHTML = _buildIframePanel(qrPaymentData.checkoutUrl);
                         currentIframeUrl = qrPaymentData.checkoutUrl;
+                        console.log("[PAYWAY-CD] BUILD iframe", qrPaymentData.checkoutUrl);
                         // The first load is the QR page; when ABA navigates to its
                         // success animation it fires load again — show Thank-you then
                         // so the right side flips in sync with the animation.
@@ -270,6 +284,7 @@ patch(CustomerDisplay.prototype, {
                         if (iframe) {
                             let firstLoad = true;
                             iframe.addEventListener("load", () => {
+                                console.log("[PAYWAY-CD] iframe LOAD firstLoad=", firstLoad);
                                 if (firstLoad) {
                                     firstLoad = false;
                                     return;
