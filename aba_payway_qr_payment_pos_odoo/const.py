@@ -14,6 +14,7 @@ API_URLS = {
     'production': 'https://checkout.payway.com.kh',
     'uat': 'https://checkout-uat.payway.com.kh',
     'sandbox': 'https://checkout-sandbox.payway.com.kh',
+    'preprod': 'https://checkout-preprod.ababank.com',
 }
 
 SUPPORTED_CURRENCIES = {

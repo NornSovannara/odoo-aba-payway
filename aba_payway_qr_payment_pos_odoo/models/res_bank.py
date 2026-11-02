@@ -111,12 +111,27 @@ class ResBank(models.Model):
         groups='base.group_system',
     )
 
+    preprod_payway_merchant_id = fields.Char(
+        string='Merchant ID',
+        help='Enter your unique PayWay Merchant ID for the Pre-Prod environment.',
+    )
+    preprod_payway_key = fields.Char(
+        string='API Key',
+        help='Enter your unique PayWay API Key for the Pre-Prod environment.',
+        groups='base.group_system',
+    )
+    preprod_rsa_public_key = fields.Text(
+        string='RSA Public Key',
+        help='Enter your unique PayWay RSA Public Key for the Pre-Prod environment.',
+        groups='base.group_system',
+    )
+
     payway_environment = fields.Selection(
-        [('disable', 'Disable'), ('production', 'Production'), ('uat', 'UAT'), ('sandbox', 'Sandbox')],
+        [('disable', 'Disable'), ('production', 'Production'), ('uat', 'UAT'), ('preprod', 'Pre-Prod'), ('sandbox', 'Sandbox')],
         string='Environment',
         default='disable',
         required=True,
-        help='Switch between Sandbox, UAT and Production payment environments for ABA PayWay.',
+        help='Switch between Sandbox, UAT, Pre-Prod and Production payment environments for ABA PayWay.',
     )
 
     payway_ssl_verify = fields.Boolean(
@@ -178,6 +193,12 @@ class ResBank(models.Model):
                 return _("Payway: For UAT environment, the 'PayWay Merchant ID' is required.")
             if not self.sudo().uat_payway_key:
                 return _("Payway: For UAT environment, the 'PayWay API Key' is required.")
+
+        elif self.sudo().payway_environment == 'preprod':
+            if not self.sudo().preprod_payway_merchant_id:
+                return _("Payway: For Pre-Prod environment, the 'PayWay Merchant ID' is required.")
+            if not self.sudo().preprod_payway_key:
+                return _("Payway: For Pre-Prod environment, the 'PayWay API Key' is required.")
 
         elif self.sudo().payway_environment == 'sandbox':
             if not self.sudo().sandbox_payway_merchant_id:
@@ -458,6 +479,14 @@ class ResBank(models.Model):
                 self.uat_payway_merchant_id,
                 self.uat_payway_key,
                 self.uat_rsa_public_key,
+            )
+        elif self.payway_environment == 'preprod':
+            api_url = const.API_URLS['preprod']
+            return (
+                api_url,
+                self.preprod_payway_merchant_id,
+                self.preprod_payway_key,
+                self.preprod_rsa_public_key,
             )
         elif self.payway_environment == 'sandbox':
             api_url = const.API_URLS['sandbox']
