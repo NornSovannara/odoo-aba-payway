@@ -199,6 +199,7 @@ patch(CustomerDisplay.prototype, {
                 // TEMP diagnostic: trace the customer-display effect ticks.
                 console.log("[PAYWAY-CD]", JSON.stringify({
                     hasQr: !!qrPaymentData,
+                    orderUid: this.order.payway_order_uid,
                     method: qrPaymentData?.qrCodeMethod,
                     checkoutUrl: qrPaymentData?.checkoutUrl,
                     paymentComplete: qrPaymentData?.paymentComplete,
