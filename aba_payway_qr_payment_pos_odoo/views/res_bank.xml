@@ -60,6 +60,23 @@
                             invisible="payway_environment != 'uat'"
                         />
 
+                        <field 
+                            name="preprod_payway_merchant_id"
+                            string="Merchant ID"
+                            invisible="payway_environment != 'preprod'"
+                        />
+                        <field 
+                            name="preprod_payway_key"
+                            string="API Key"
+                            password="True"
+                            invisible="payway_environment != 'preprod'"
+                        />
+                        <field
+                            name="preprod_rsa_public_key"
+                            string="RSA Public Key"
+                            invisible="payway_environment != 'preprod'"
+                        />
+
                     </group>
                     
                     <group>

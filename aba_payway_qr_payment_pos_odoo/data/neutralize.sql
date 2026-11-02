@@ -5,4 +5,7 @@ UPDATE res_partner_bank
        production_rsa_public_key = NULL,
        sandbox_payway_merchant_id = NULL,
        sandbox_payway_key = NULL,
-       sandbox_rsa_public_key = NULL;
+       sandbox_rsa_public_key = NULL,
+       preprod_payway_merchant_id = NULL,
+       preprod_payway_key = NULL,
+       preprod_rsa_public_key = NULL;
