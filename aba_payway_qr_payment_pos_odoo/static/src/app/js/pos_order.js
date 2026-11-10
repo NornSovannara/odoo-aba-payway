@@ -10,10 +10,6 @@ patch(PosOrder.prototype, {
         const data = super.getCustomerDisplayData();
         const selectedPaymentLine = this.get_selected_paymentline();
 
-        // Order identity so the customer display can tell a genuinely new order
-        // apart from the `finalized` flag toggling during completion.
-        data.payway_order_uid = this.uuid;
-
         if (selectedPaymentLine && selectedPaymentLine.qrPaymentData) {
 
             // Add qrCodeMethod to qrPaymentData to use in qr customer display
