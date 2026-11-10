@@ -47,6 +47,7 @@ QR_PAYMENT_SECURE_HASH_KEYS = [
     'payout',
     'lifetime',
     'qr_image_template',
+    'extra_response_fields',
 ]
 
 CHECK_TXN_SECURE_HASH_KEYS = ['req_time', 'merchant_id', 'tran_id']
