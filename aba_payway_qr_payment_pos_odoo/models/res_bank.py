@@ -20,6 +20,16 @@ _logger = logging.getLogger(__name__)
 
 MAX_RETRY = 2
 
+
+def _hash_str(value):
+    """Stringify a payload value for the secure hash. A list/tuple field (e.g.
+    extra_response_fields) is joined so it signs as its value, not Python's
+    list repr like "['checkout_qr_url']"."""
+    if isinstance(value, (list, tuple)):
+        return ''.join(str(v) for v in value)
+    return str(value)
+
+
 def _make_payway_api_request(base_url: str, endpoint: str, payload: dict, verify: bool = True):
     url = urljoin(base_url, endpoint)
 
@@ -266,6 +276,8 @@ class ResBank(models.Model):
                 'callback_url': base64.b64encode(webhook_url.encode('utf-8')).decode(
                     'utf-8'
                 ),
+                # Ask PayWay to include the hosted checkout URL in the response.
+                'extra_response_fields': ['checkout_qr_url'],
             }
 
             payload.update(
@@ -550,7 +562,7 @@ class ResBank(models.Model):
         :rtype: str
         """
 
-        data_to_sign = [str(payload.get(k, '')) for k in secure_hash_keys]
+        data_to_sign = [_hash_str(payload.get(k, '')) for k in secure_hash_keys]
         signing_string = ''.join(data_to_sign)
         hmac_hash = hmac.new(
             api_key.encode(), signing_string.encode(), hashlib.sha512
