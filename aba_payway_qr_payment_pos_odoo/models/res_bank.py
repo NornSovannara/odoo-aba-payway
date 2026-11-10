@@ -269,9 +269,14 @@ class ResBank(models.Model):
                     if qr_type == const.POS_ORDER_QR_TYPE['bill'] else 
                     self.digital_qr_lifetime
                 ),
+                # Only the printed bill uses this server image (the screen renders
+                # from qrString), and bill+screen share ONE generation — so for
+                # KHQR always request the branded bill template so the cached image
+                # is correct no matter which surface generated first.
                 'qr_image_template': (
-                    'template2' if model == 'pos.order' and 
-                    qr_type == const.POS_ORDER_QR_TYPE['bill'] else 'template1_color'
+                    'template2'
+                    if qr_method == const.PAYMENT_METHODS_MAPPING['abapay_khqr']
+                    else 'template1_color'
                 ),
                 'callback_url': base64.b64encode(webhook_url.encode('utf-8')).decode(
                     'utf-8'
