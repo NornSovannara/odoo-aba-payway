@@ -176,6 +176,15 @@
     padding: 0;
 }
 
+.payway-cd-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+    height: 100%;
+}
+
 .payway-cd-iframe {
     width: 100%;
     height: 100%;

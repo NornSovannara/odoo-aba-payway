@@ -117,6 +117,14 @@ function _buildSuccessPanel(qrPaymentData) {
         </div>`;
 }
 
+function _buildLoadingPanel() {
+    return `
+        <div class="payway-cd-inner payway-cd-loading">
+            <img class="payway-cd-aba-logo" src="${MODULE_IMG}/aba-pay.svg" alt="ABA Pay Logo" />
+            <span class="spinner-border" role="status" aria-hidden="true"></span>
+        </div>`;
+}
+
 function _buildIframePanel(checkoutUrl) {
     const url = _escape(checkoutUrl);
     return `
@@ -285,6 +293,10 @@ patch(CustomerDisplay.prototype, {
                     } else if (qrPaymentData.paymentComplete) {
                         // Fallback (no hosted page): our own success view.
                         overlayEl.innerHTML = _buildSuccessPanel(qrPaymentData);
+                    } else if (!qrPaymentData.checkoutUrlChecked) {
+                        // Checkout URL lookup still pending: show a loader rather than
+                        // the legacy card, which would flash before the iframe.
+                        overlayEl.innerHTML = _buildLoadingPanel();
                     } else {
                         // Fallback: render the QR card ourselves from qrString.
                         overlayEl.innerHTML = _buildKhqrPanel(qrPaymentData);

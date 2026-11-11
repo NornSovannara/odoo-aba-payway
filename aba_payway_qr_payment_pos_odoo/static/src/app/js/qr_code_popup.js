@@ -71,22 +71,27 @@ patch(QRPopup.prototype, {
     },
 
     async _loadPaywayCheckoutUrl() {
+        let url = null;
         try {
-            const url = await this.orm.call("pos.payment.method", "payway_get_checkout_url", [
+            url = await this.orm.call("pos.payment.method", "payway_get_checkout_url", [
                 [this.props.line.payment_method_id.id],
                 this.props.line.transaction_id,
             ]);
-            if (url) {
-                // Render the ABA-hosted page in an iframe on the cashier card
-                // (same as the customer screen) and feed the customer display.
-                this.paywayQRState.checkoutUrl = url;
-                const line = this.props.line;
-                if (line.qrPaymentData) {
-                    line.qrPaymentData = { ...line.qrPaymentData, checkoutUrl: url };
-                }
-            }
         } catch {
             // Silent fallback: the in-template QR card keeps rendering.
+        }
+        if (url) {
+            this.paywayQRState.checkoutUrl = url;
+        }
+        const line = this.props.line;
+        if (line.qrPaymentData) {
+            // checkoutUrlChecked lets the customer display wait for the iframe
+            // instead of flashing the legacy card first.
+            line.qrPaymentData = {
+                ...line.qrPaymentData,
+                checkoutUrl: url || null,
+                checkoutUrlChecked: true,
+            };
         }
     },
 

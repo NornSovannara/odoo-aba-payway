@@ -23,6 +23,7 @@ patch(PosOrder.prototype, {
             // Carry the ABA-hosted checkout URL + payment state so the customer
             // display can embed the iframe and swap to the success view.
             data.qrPaymentData.checkoutUrl = selectedPaymentLine.qrPaymentData.checkoutUrl || null;
+            data.qrPaymentData.checkoutUrlChecked = selectedPaymentLine.qrPaymentData.checkoutUrlChecked || false;
             data.qrPaymentData.paymentComplete = selectedPaymentLine.qrPaymentData.paymentComplete || false;
         }
         return data;
