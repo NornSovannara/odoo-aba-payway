@@ -137,11 +137,11 @@ class ResBank(models.Model):
     )
 
     payway_environment = fields.Selection(
-        [('disable', 'Disable'), ('production', 'Production'), ('uat', 'UAT'), ('preprod', 'Pre-Prod'), ('sandbox', 'Sandbox')],
+        selection='_selection_payway_environment',
         string='Environment',
         default='disable',
         required=True,
-        help='Switch between Sandbox, UAT, Pre-Prod and Production payment environments for ABA PayWay.',
+        help='Switch between Sandbox and Production payment environments for ABA PayWay.',
     )
 
     payway_ssl_verify = fields.Boolean(
@@ -162,6 +162,14 @@ class ResBank(models.Model):
         required=True,        
     )
 
+
+    @api.model
+    def _selection_payway_environment(self):
+        environments = [('disable', 'Disable'), ('production', 'Production'), ('sandbox', 'Sandbox')]
+        # Internal ABA test hosts; enabled per database via this system parameter.
+        if self.env['ir.config_parameter'].sudo().get_param('aba_payway.internal_environments'):
+            environments[2:2] = [('uat', 'UAT'), ('preprod', 'Pre-Prod')]
+        return environments
 
     @api.constrains('digital_qr_lifetime', 'bill_qr_lifetime')
     def _check_qr_lifetimes(self):
