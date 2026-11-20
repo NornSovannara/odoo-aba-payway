@@ -1,5 +1,5 @@
 {
-    'name': 'ABA PayWay for Odoo Point of Sales',
+    'name': 'ABA PayWay for Odoo Point of Sale',
     'countries': ['KH'],
     'version': '1.0',
     'summary': 'Display dynamic payment QR codes on screen and printed bills.',
@@ -26,6 +26,9 @@
     'author': 'ABA Bank',
     'license': 'LGPL-3',
     'category': 'Point of Sale',
+    'images': [
+        'static/description/banner.gif',
+    ],
     'depends': [
         'account',
         'point_of_sale',
