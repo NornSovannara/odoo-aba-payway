@@ -1,7 +1,7 @@
 {
     'name': 'ABA PayWay for Odoo Point of Sale',
     'countries': ['KH'],
-    'version': '1.1',
+    'version': '1.2',
     'summary': 'Display dynamic payment QR codes on screen and printed bills.',
     'description': """
         Let customers pay using QR codes in Odoo POS.\n
